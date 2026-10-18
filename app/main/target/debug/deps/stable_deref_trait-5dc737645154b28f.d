@@ -1,0 +1,7 @@
+/workspace/github__reSqur-dygcus-wumvu8__V3/app/main/target/debug/deps/stable_deref_trait-5dc737645154b28f.d: /home/appuser/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs
+
+/workspace/github__reSqur-dygcus-wumvu8__V3/app/main/target/debug/deps/libstable_deref_trait-5dc737645154b28f.rlib: /home/appuser/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs
+
+/workspace/github__reSqur-dygcus-wumvu8__V3/app/main/target/debug/deps/libstable_deref_trait-5dc737645154b28f.rmeta: /home/appuser/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs
+
+/home/appuser/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/stable_deref_trait-1.2.1/src/lib.rs:

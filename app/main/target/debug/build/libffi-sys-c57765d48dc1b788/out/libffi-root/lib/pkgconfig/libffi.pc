@@ -1,0 +1,11 @@
+prefix=/workspace/github__reSqur-dygcus-wumvu8__V3/app/main/target/debug/build/libffi-sys-c57765d48dc1b788/out/libffi-root
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+toolexeclibdir=${libdir}/../lib
+includedir=${prefix}/include
+
+Name: libffi
+Description: Library supporting Foreign Function Interfaces
+Version: 3.4.4
+Libs: -L${toolexeclibdir} -lffi
+Cflags: -I${includedir}

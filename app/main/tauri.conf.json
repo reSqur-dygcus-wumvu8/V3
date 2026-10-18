@@ -1,0 +1,242 @@
+{
+  "productName": "OSINT App",
+  "version": "0.1.0",
+  "description": "Application de collecte, capitalisation et exploitation d'informations OSINT",
+  "authors": ["Votre Organisation"],
+  "license": "Propriétaire",
+  "copyright": "Copyright © 2024 Votre Organisation",
+  "identifier": "com.yourorg.osint_app",
+  
+  "build": {
+    "beforeBuildCommand": "",
+    "beforeDevCommand": "",
+    "devPath": "",
+    "distDir": "../dist/main",
+    "withGlobalTauri": false,
+    
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "target": ["x86_64", "arm64"],
+      "bundleIdentifier": "com.yourorg.osint_app",
+      "entitlements": {
+        "com.apple.security.app-sandbox": false,
+        "com.apple.security.network.server": true,
+        "com.apple.security.network.client": true
+      },
+      "hardenedRuntime": true,
+      "gatekeeper": {
+        "entitlements": {
+          "com.apple.security.cs.allow-unsigned-executable-memory": true,
+          "com.apple.security.cs.allow-jit": true
+        }
+      }
+    },
+    
+    "linux": {
+      "target": ["x86_64", "arm64"],
+      "appImage": true,
+      "deb": true,
+      "rpm": true
+    },
+    
+    "windows": {
+      "target": ["x86_64"],
+      "nsis": true,
+      "wix": true
+    }
+  },
+  
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "execute": [
+          "tor",
+          "sh",
+          "bash"
+        ],
+        "open": true,
+        "scope": [
+          {
+            "name": "Open external links",
+            "allow": [
+              "https://*",
+              "http://*"
+            ]
+          }
+        ]
+      },
+      "fs": {
+        "all": false,
+        "readText": [
+          "$APPDATA/**",
+          "$HOME/**",
+          "/tmp/**"
+        ],
+        "readBinary": [
+          "$APPDATA/**",
+          "$HOME/**",
+          "/tmp/**"
+        ],
+        "writeText": [
+          "$APPDATA/**",
+          "$HOME/**",
+          "/tmp/**"
+        ],
+        "writeBinary": [
+          "$APPDATA/**",
+          "$HOME/**",
+          "/tmp/**"
+        ],
+        "scope": []
+      },
+      "path": {
+        "all": false,
+        "scope": []
+      },
+      "clipboard": {
+        "all": true
+      },
+      "dialog": {
+        "all": true
+      },
+      "http": {
+        "all": false,
+        "request": true
+      },
+      "globalShortcut": {
+        "all": false
+      },
+      "notification": {
+        "all": true
+      },
+      "os": {
+        "all": false
+      },
+      "process": {
+        "all": false
+      },
+      "window": {
+        "all": true
+      }
+    },
+    
+    "updater": {
+      "active": false
+    },
+    
+    "bundle": {
+      "active": true,
+      "targets": ["all"],
+      "identifier": "com.yourorg.osint_app",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "resources": [],
+      "externalBinaries": [
+        {
+          "name": "tor",
+          "os": ["macOS", "linux", "windows"],
+          "sources": {
+            "macOS": {
+              "url": "https://dist.torproject.org/torbrowser/13.0.6/tor-browser-macos-x86_64-en-US.dmg",
+              "hash": "",
+              "binaries": [
+                {
+                  "name": "tor",
+                  "path": "Tor Browser.app/Contents/MacOS/tor"
+                }
+              ]
+            },
+            "linux": {
+              "url": "https://dist.torproject.org/torbrowser/13.0.6/tor-browser-linux64-13.0.6_en-US.tar.xz",
+              "hash": "",
+              "binaries": [
+                {
+                  "name": "tor",
+                  "path": "tor-browser_en-US/Browser/TorBrowser/Tor/tor"
+                }
+              ]
+            },
+            "windows": {
+              "url": "https://dist.torproject.org/torbrowser/13.0.6/tor-browser-windows-x86_64-en-US.zip",
+              "hash": "",
+              "binaries": [
+                {
+                  "name": "tor.exe",
+                  "path": "Tor Browser/Browser/TorBrowser/Tor/tor.exe"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "macOS": {
+        "appCategoryType": "public.app-category.utilities",
+        "entitlements": {
+          "com.apple.security.app-sandbox": false,
+          "com.apple.security.network.server": true,
+          "com.apple.security.network.client": true,
+          "com.apple.security.personal-information.location": true
+        },
+        "frameworks": [],
+        "libraries": []
+      },
+      "linux": {
+        "category": "Utility",
+        "desktop": {
+          "Name": "OSINT App",
+          "Comment": "Application de collecte, capitalisation et exploitation d'informations OSINT",
+          "Exec": "osint_app",
+          "Icon": "osint_app",
+          "Terminal": false,
+          "Type": "Application",
+          "Categories": "Utility;",
+          "StartupWMClass": "OSINT App"
+        }
+      },
+      "windows": {
+        "appx": false,
+        "msi": true,
+        "nsis": true,
+        "wix": true
+      }
+    }
+  },
+  
+  "app": {
+    "security": {
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; style-src 'self' 'unsafe-inline' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' data:; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; frame-src 'none';"
+    },
+    
+    "windows": [
+      {
+        "title": "OSINT App",
+        "width": 1024,
+        "height": 768,
+        "minWidth": 1024,
+        "minHeight": 768,
+        "visible": true,
+        "resizable": true,
+        "decorations": true,
+        "center": true,
+        "fileDropEnabled": true,
+        "url": "index.html"
+      }
+    ],
+    
+    "macOS": {
+      "LSUIElement": false,
+      "LSBackgroundOnly": false,
+      "LSSupportsOpeningDocumentsInPlace": false,
+      "NSHighResolutionCapable": true,
+      "NSRequiresAquaSystemAppearance": false,
+      "NSFullScreenEnabled": true
+    }
+  }
+}

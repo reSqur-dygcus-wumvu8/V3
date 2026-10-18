@@ -1,0 +1,81 @@
+[package]
+name = "osint_app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Tauri - Application desktop (désactivé par défaut pour la compilation standalone)
+tauri = { version = "2.0", optional = true }
+
+# Async
+tokio = { version = "1.0", features = ["full"] }
+
+# HTTP Client (avec support SOCKS5 pour TOR, sans OpenSSL)
+reqwest = { version = "0.13", features = ["socks", "json", "stream", "rustls"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Base de données
+rusqlite = { version = "0.30", features = ["bundled"] }
+
+# Gestion des dates
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# FFI pour MLA
+libffi = "3.0"
+
+# Gestion des erreurs
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# Path manipulation
+dirs = "5.0"
+
+# IPC (Unix Domain Sockets)
+interprocess = "2.0"
+
+# Chiffrement supplémentaire (AES-256-GCM)
+aes-gcm = "0.10"
+sha2 = "0.10"
+hmac = "0.12"
+zeroize = "1.6"
+
+# Pour MLA
+rand = "0.8"
+hkdf = "0.12"
+
+# Utilitaires
+lazy_static = "1.4"
+
+# HTML Scraping
+scraper = "0.18"
+
+# URL encoding
+urlencoding = "2.1"
+
+# Module partagé
+osint_shared = { path = "../shared" }
+
+[build-dependencies]
+bindgen = "0.69"
+
+[features]
+default = ["tauri"]
+# Pour le développement sans Tauri
+standalone = []
+
+[profile.release]
+opt-level = "z"  # Optimisation pour la taille
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
