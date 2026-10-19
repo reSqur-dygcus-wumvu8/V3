@@ -1,5 +1,6 @@
-//! Module backend de l'application principale OSINT
-//! Contient toute la logique métier
+use crate::AppState;
+// Module backend de l'application principale OSINT
+// Contient toute la logique métier
 
 pub mod db;
 pub mod tor;

@@ -1,5 +1,6 @@
-//! Module de gestion des cotations OTAN
-//! Gère le système de cotation A-F (source) et 1-6 (information)
+use crate::AppState;
+// Module de gestion des cotations OTAN
+// Gère le système de cotation A-F (source) et 1-6 (information)
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -306,7 +307,7 @@ impl CotationManager {
         cotation: &OtanCotation,
         rated_by: Option<i64>,
     ) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let cotation_id = db.conn.execute(
@@ -331,7 +332,7 @@ impl CotationManager {
         entity_type: &str,
         entity_id: i64,
     ) -> Result<Option<OtanCotation>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let mut stmt = db.conn.prepare(
             "SELECT reliability_code, credibility_code 
@@ -365,7 +366,7 @@ impl CotationManager {
         entity_type: &str,
         entity_id: i64,
     ) -> Result<Vec<(String, String, String)>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let mut stmt = db.conn.prepare(
             "SELECT reliability_code, credibility_code, rated_at 
@@ -398,7 +399,7 @@ impl CotationManager {
         cotation: &OtanCotation,
         rated_by: Option<i64>,
     ) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         db.conn.execute(
@@ -488,14 +489,14 @@ impl CotationManager {
 /// Commandes Tauri pour les cotations
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn propose_cotation(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     source_name: String,
     source_url: Option<String>,
     source_type: Option<String>,
@@ -516,14 +517,14 @@ pub async fn propose_cotation(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_entity_cotation(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     entity_id: i64,
 ) -> Result<Option<OtanCotation>, String> {
@@ -533,14 +534,14 @@ pub async fn get_entity_cotation(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn update_entity_cotation(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     entity_id: i64,
     reliability: char,
@@ -554,36 +555,36 @@ pub async fn update_entity_cotation(
 }
 
 
-#[tauri::command]
-pub fn get_reliability_codes() -> Vec<(String, String)> {
+#[allow(dead_code)]
+pub async fn get_reliability_codes() -> Vec<(String, String)> {
     RELIABILITY_CODES.iter()
         .map(|(code, label)| (code.to_string(), label.to_string()))
         .collect()
 }
 
 
-#[tauri::command]
-pub fn get_credibility_codes() -> Vec<(String, String)> {
+#[allow(dead_code)]
+pub async fn get_credibility_codes() -> Vec<(String, String)> {
     CREDIBILITY_CODES.iter()
         .map(|(code, label)| (code.to_string(), label.to_string()))
         .collect()
 }
 
 
-#[tauri::command]
-pub fn validate_cotation(reliability: char, credibility: char) -> Result<(), String> {
+#[allow(dead_code)]
+pub async fn validate_cotation(reliability: char, credibility: char) -> Result<(), String> {
     OtanCotation::validate(reliability, credibility)
 }
 
 
-#[tauri::command]
-pub fn parse_cotation(cotation: String) -> Result<OtanCotation, String> {
+#[allow(dead_code)]
+pub async fn parse_cotation(cotation: String) -> Result<OtanCotation, String> {
     OtanCotation::from_str(&cotation)
 }
 
 
-#[tauri::command]
-pub fn get_cotation_label(reliability: char, credibility: char) -> Result<String, String> {
+#[allow(dead_code)]
+pub async fn get_cotation_label(reliability: char, credibility: char) -> Result<String, String> {
     let cotation = OtanCotation::new(reliability, credibility)?;
     Ok(cotation.get_label())
 }

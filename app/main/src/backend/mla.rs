@@ -1,5 +1,6 @@
-//! Module d'intégration de la bibliothèque MLA (ANSSI)
-//! Gère le chiffrement et déchiffrement des données
+use crate::AppState;
+// Module d'intégration de la bibliothèque MLA (ANSSI)
+// Gère le chiffrement et déchiffrement des données
 
 use std::path::Path;
 use std::ffi::{CString, CStr};
@@ -274,21 +275,21 @@ impl Drop for MlaEncryption {
 /// Commandes Tauri pour MLA
 
 
-#[tauri::command]
-pub fn mla_generate_key() -> Vec<u8> {
+#[allow(dead_code)]
+pub async fn mla_generate_key() -> Vec<u8> {
     MlaContext::generate_key()
 }
 
 
-#[tauri::command]
-pub fn mla_encrypt(data: Vec<u8>, key: Vec<u8>) -> Result<Vec<u8>, String> {
+#[allow(dead_code)]
+pub async fn mla_encrypt(data: Vec<u8>, key: Vec<u8>) -> Result<Vec<u8>, String> {
     let context = MlaContext::new().map_err(|e| e.to_string())?;
     context.encrypt(&key, &data).map_err(|e| e.to_string())
 }
 
 
-#[tauri::command]
-pub fn mla_decrypt(data: Vec<u8>, key: Vec<u8>) -> Result<Vec<u8>, String> {
+#[allow(dead_code)]
+pub async fn mla_decrypt(data: Vec<u8>, key: Vec<u8>) -> Result<Vec<u8>, String> {
     let context = MlaContext::new().map_err(|e| e.to_string())?;
     context.decrypt(&key, &data).map_err(|e| e.to_string())
 }

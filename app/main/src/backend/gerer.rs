@@ -1,5 +1,7 @@
-//! Module GÉRER
-//! Gère la gestion des doublons, des paramètres et l'administration
+use osint_shared::models::EntityType;
+use crate::AppState;
+// Module GÉRER
+// Gère la gestion des doublons, des paramètres et l'administration
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -158,7 +160,7 @@ impl GererManager {
         duplicate_result: &DuplicateResult,
         strategy: &DeduplicationStrategy,
     ) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         for candidate in &duplicate_result.potential_duplicates {
@@ -189,7 +191,7 @@ impl GererManager {
         status: Option<DuplicateReviewStatus>,
         limit: Option<usize>,
     ) -> Result<Vec<DuplicateReviewItem>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let status_filter = status.map(|s| format!(" AND status = '{}'", s.as_str())).unwrap_or_default();
         let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
@@ -240,7 +242,7 @@ impl GererManager {
     ) -> Result<(), String> {
         info!("Traitement de l'élément de revue {} avec action: {:?}", item_id, action);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         // Récupérer l'élément
@@ -395,7 +397,7 @@ impl GererManager {
 
     /// Récupère les statistiques de la base
     pub async fn get_database_stats(&self) -> Result<DatabaseStats, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         // Compter les entités par type
         let entity_types = ["individuals", "organizations", "events", "locations", "objects", "sources"];
@@ -460,7 +462,7 @@ impl GererManager {
 
     /// Sauvegarde une sauvegarde de la base
     pub async fn backup_database(&self, backup_path: &str) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         // Copier le fichier de la base
         let db_path = db.get_path()?;
@@ -475,7 +477,7 @@ impl GererManager {
 
     /// Restaure une sauvegarde de la base
     pub async fn restore_database(&self, backup_path: &str) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         // Fermer la connexion actuelle
         // En production, il faudrait redémarrer l'application
@@ -493,7 +495,7 @@ impl GererManager {
 
     /// Optimise la base de données
     pub async fn optimize_database(&self) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         // Exécuter VACUUM pour optimiser la base
         db.conn.execute("VACUUM", []).map_err(|e| e.to_string())?;
@@ -508,7 +510,7 @@ impl GererManager {
 
     /// Vérifie l'intégrité de la base
     pub async fn check_database_integrity(&self) -> Result<Vec<String>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let mut errors = Vec::new();
 
         // Vérifier les tables
@@ -553,7 +555,7 @@ impl GererManager {
 
     /// Exporte les données au format JSON
     pub async fn export_data_json(&self, entity_type: Option<String>) -> Result<String, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         if let Some(entity_type) = entity_type {
             // Exporter un type d'entité spécifique
@@ -619,7 +621,7 @@ impl GererManager {
         let data: serde_json::Value = serde_json::from_str(json_data)
             .map_err(|e| format!("JSON invalide: {}", e))?;
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let tx = db.conn.transaction().map_err(|e| e.to_string())?;
 
         if let Some(obj) = data.as_object() {
@@ -697,14 +699,14 @@ impl GererManager {
 /// Commandes Tauri pour le module GÉRER
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn detect_duplicates(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     strategy: String,
     auto_add_to_review: bool,
 ) -> Result<Vec<DuplicateResult>, String> {
@@ -716,14 +718,14 @@ pub async fn detect_duplicates(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_duplicate_review_queue(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     status: Option<String>,
     limit: Option<usize>,
 ) -> Result<Vec<DuplicateReviewItem>, String> {
@@ -734,14 +736,14 @@ pub async fn get_duplicate_review_queue(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn process_duplicate_review_item(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     item_id: i64,
     user_id: i64,
     action: String,
@@ -755,14 +757,14 @@ pub async fn process_duplicate_review_item(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn auto_clean_duplicates(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     strategy: String,
     min_similarity: f64,
     user_id: Option<i64>,
@@ -775,28 +777,28 @@ pub async fn auto_clean_duplicates(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_database_stats(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
 ) -> Result<DatabaseStats, String> {
     let gerer_manager = GererManager::new(Arc::clone(&state.db));
     gerer_manager.get_database_stats().await
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn backup_database(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     backup_path: String,
 ) -> Result<(), String> {
     let gerer_manager = GererManager::new(Arc::clone(&state.db));
@@ -804,14 +806,14 @@ pub async fn backup_database(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn restore_database(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     backup_path: String,
 ) -> Result<(), String> {
     let gerer_manager = GererManager::new(Arc::clone(&state.db));
@@ -819,42 +821,42 @@ pub async fn restore_database(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn optimize_database(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
 ) -> Result<(), String> {
     let gerer_manager = GererManager::new(Arc::clone(&state.db));
     gerer_manager.optimize_database().await
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn check_database_integrity(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
 ) -> Result<Vec<String>, String> {
     let gerer_manager = GererManager::new(Arc::clone(&state.db));
     gerer_manager.check_database_integrity().await
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn export_data_json(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: Option<String>,
 ) -> Result<String, String> {
     let gerer_manager = GererManager::new(Arc::clone(&state.db));
@@ -862,14 +864,14 @@ pub async fn export_data_json(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn import_data_json(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     json_data: String,
 ) -> Result<(), String> {
     let gerer_manager = GererManager::new(Arc::clone(&state.db));
@@ -877,8 +879,8 @@ pub async fn import_data_json(
 }
 
 
-#[tauri::command]
-pub fn get_duplicate_review_statuses() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_duplicate_review_statuses() -> Vec<String> {
     vec![
         DuplicateReviewStatus::Pending.as_str().to_string(),
         DuplicateReviewStatus::Reviewed.as_str().to_string(),
@@ -888,8 +890,8 @@ pub fn get_duplicate_review_statuses() -> Vec<String> {
 }
 
 
-#[tauri::command]
-pub fn get_duplicate_actions() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_duplicate_actions() -> Vec<String> {
     vec![
         DuplicateAction::Merge.as_str().to_string(),
         DuplicateAction::Ignore.as_str().to_string(),

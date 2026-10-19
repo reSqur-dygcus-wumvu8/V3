@@ -1,5 +1,6 @@
-//! Module de découverte
-//! Gère le mode découverte avec Mistral API
+use crate::AppState;
+// Module de découverte
+// Gère le mode découverte avec Mistral API
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -151,7 +152,7 @@ impl DiscoveryManager {
         }
 
         // Créer une nouvelle veille
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let sources_json = serde_json::to_string(&source_ids).unwrap_or_default();
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -177,23 +178,23 @@ impl DiscoveryManager {
 /// Commandes Tauri pour le mode découverte
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn discover_topic(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     topic: String,
     language: Option<String>,
     max_tokens: Option<u32>,
     temperature: Option<f64>,
 ) -> Result<DiscoveryResult, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
     
     let discovery_manager = DiscoveryManager::new(api_client, Arc::clone(&state.db));
@@ -201,24 +202,24 @@ pub async fn discover_topic(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn add_discovered_sources_to_watch(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     sources: Vec<DiscoveredSource>,
     watch_name: String,
     query: String,
     language: String,
     frequency: u32,
 ) -> Result<i64, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
     
     let discovery_manager = DiscoveryManager::new(api_client, Arc::clone(&state.db));

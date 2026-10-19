@@ -1,5 +1,6 @@
-//! Planificateur de tâches pour les veilles
-//! Gère l'exécution périodique des veilles et le traitement des résultats
+use crate::AppState;
+// Planificateur de tâches pour les veilles
+// Gère l'exécution périodique des veilles et le traitement des résultats
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -89,7 +90,7 @@ impl WatchScheduler {
 
     /// Exécute toutes les veilles actives
     async fn run_active_watches(&self) -> Result<()> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let watches = db.get_active_watches()?;
 
         info!("Exécution de {} veilles actives", watches.len());
@@ -113,7 +114,7 @@ impl WatchScheduler {
         let scraper_factory = self.scraper_factory.as_ref()
             .ok_or_else(|| anyhow::anyhow!("ScraperFactory non initialisé"))?;
 
-        let tor_client = self.tor_client.lock().unwrap();
+        let tor_client = self.tor_client.lock().await;
 
         // Sélectionner le nœud TOR adapté
         let target_country = self.get_target_country(&watch.sources);
@@ -198,7 +199,7 @@ impl WatchScheduler {
 
     /// Sauvegarde les résultats dans la base
     async fn save_results(&self, results: Vec<WatchResult>, watch_id: i64) -> Result<()> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         for result in results {
             let mut result_with_watch_id = result;
@@ -220,7 +221,7 @@ impl WatchScheduler {
     ) -> Result<()> {
         // Pour l'instant, on marque simplement les résultats comme traités
         // Le traitement complet (NER, cotation) sera implémenté dans le module processor
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         for result in results {
             if let Some(id) = result.id {
@@ -234,7 +235,7 @@ impl WatchScheduler {
     /// Calcule la durée d'attente jusqu'au prochain cycle
     async fn calculate_sleep_duration(&self) -> Duration {
         // Récupérer toutes les veilles actives pour trouver la fréquence minimale
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         
         match db.get_active_watches() {
             Ok(watches) => {
@@ -262,7 +263,7 @@ impl WatchScheduler {
 
     /// Exécute une veille manuellement (pour les tests)
     pub async fn run_watch_manually(&self, watch_id: i64) -> Result<Vec<WatchResult>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let watches = db.get_active_watches()?;
 
         let watch = watches.into_iter()
@@ -297,27 +298,27 @@ impl WatchScheduler {
 /// Commandes Tauri pour le planificateur
 
 
-#[tauri::command]
-pub fn start_watch_scheduler(
+#[allow(dead_code)]
+pub async fn start_watch_scheduler(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<(), String> {
+        state: &crate::AppState) -> Result<(), String> {
     let mut watch_scheduler = WatchScheduler::new(
         Arc::clone(&state.db),
         Arc::clone(&state.tor_manager),
     );
 
     // Initialiser les dépendances
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
     let scraper_factory = ScraperFactory::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     watch_scheduler = watch_scheduler.with_dependencies(api_client, scraper_factory);
@@ -331,13 +332,13 @@ pub fn start_watch_scheduler(
 }
 
 
-#[tauri::command]
-pub fn stop_watch_scheduler(
+#[allow(dead_code)]
+pub async fn stop_watch_scheduler(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<(), String> {
+        state: &crate::AppState) -> Result<(), String> {
     // Pour l'instant, on ne peut pas arrêter le planificateur depuis l'extérieur
     // car il est lancé dans un tokio::spawn séparé.
     // Cela nécessiterait une gestion d'état globale.
@@ -345,14 +346,14 @@ pub fn stop_watch_scheduler(
 }
 
 
-#[tauri::command]
-pub fn run_watch_manually(
+#[allow(dead_code)]
+pub async fn run_watch_manually(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     watch_id: i64,
 ) -> Result<Vec<WatchResult>, String> {
     let mut watch_scheduler = WatchScheduler::new(
@@ -361,14 +362,14 @@ pub fn run_watch_manually(
     );
 
     // Initialiser les dépendances
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
     let scraper_factory = ScraperFactory::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     watch_scheduler = watch_scheduler.with_dependencies(api_client, scraper_factory);

@@ -1,5 +1,7 @@
-//! Module de capitalisation des informations
-//! Gère la transformation des résultats de veille en entités de la base de connaissance
+use osint_shared::models::EntityType;
+use crate::AppState;
+// Module de capitalisation des informations
+// Gère la transformation des résultats de veille en entités de la base de connaissance
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -64,7 +66,7 @@ impl CapitalizationManager {
     ) -> Result<CapitalizedInfo, String> {
         info!("Capitalisation du résultat de veille: {} (ID: {})", watch_result.title, watch_result.id);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         // 1. Extraire les entités du résultat
@@ -231,7 +233,7 @@ impl CapitalizationManager {
                             None,
                             None,
                             None,
-                        ).await?
+                        ).await.map_err(|e| e.to_string())?
                     }
                     super::ner::DetectedEntityType::Organization => {
                         entity_manager.create_organization(
@@ -243,7 +245,7 @@ impl CapitalizationManager {
                             None,
                             None,
                             None,
-                        ).await?
+                        ).await.map_err(|e| e.to_string())?
                     }
                     super::ner::DetectedEntityType::Location => {
                         entity_manager.create_location(
@@ -254,7 +256,7 @@ impl CapitalizationManager {
                             None,
                             Some(format!("Créé depuis la capitalisation de: {}", result.title)),
                             None,
-                        ).await?
+                        ).await.map_err(|e| e.to_string())?
                     }
                     super::ner::DetectedEntityType::Event => {
                         entity_manager.create_event(
@@ -265,7 +267,7 @@ impl CapitalizationManager {
                             Some(format!("Créé depuis la capitalisation de: {}", result.title)),
                             None,
                             None,
-                        ).await?
+                        ).await.map_err(|e| e.to_string())?
                     }
                     super::ner::DetectedEntityType::Object => {
                         entity_manager.create_object(
@@ -274,7 +276,7 @@ impl CapitalizationManager {
                             None,
                             Some(format!("Créé depuis la capitalisation de: {}", result.title)),
                             None,
-                        ).await?
+                        ).await.map_err(|e| e.to_string())?
                     }
                     _ => {
                         // Créer une entité générique
@@ -283,7 +285,7 @@ impl CapitalizationManager {
                             matched_entity.detected_entity.text.clone(),
                             Some(format!("Créé depuis la capitalisation de: {}", result.title)),
                             None,
-                        ).await?
+                        ).await.map_err(|e| e.to_string())?
                     }
                 };
 
@@ -318,7 +320,7 @@ impl CapitalizationManager {
         entity_id: i64,
         watch_result_id: i64,
     ) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         db.conn.execute(
             "INSERT INTO watch_result_entities (watch_result_id, entity_type, entity_id) 
@@ -339,7 +341,7 @@ impl CapitalizationManager {
         let entity_manager = EntityManager::new(Arc::clone(&self.db));
 
         // Récupérer l'entité existante
-        let entity = entity_manager.get_entity(entity_type.clone(), entity_id).await?
+        let entity = entity_manager.get_entity(entity_type.clone(), entity_id).await.map_err(|e| e.to_string())?
             .ok_or("Entité non trouvée")?;
 
         // Mettre à jour avec les nouvelles informations
@@ -394,7 +396,7 @@ impl CapitalizationManager {
         is_valid: bool,
         comments: Option<String>,
     ) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         if is_valid {
@@ -418,7 +420,7 @@ impl CapitalizationManager {
         &self,
         limit: Option<usize>,
     ) -> Result<Vec<CapitalizedInfo>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
 
@@ -465,7 +467,7 @@ impl CapitalizationManager {
         &self,
         watch_id: i64,
     ) -> Result<Vec<CapitalizedInfo>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let mut stmt = db.conn.prepare(
             "SELECT ci.id, ci.watch_result_id, ci.entity_type, ci.entity_id, ci.title, ci.content, ci.source_name, ci.source_url, ci.cotation, ci.is_validated, ci.validated_by, ci.validated_at, ci.created_at, ci.updated_at 
@@ -541,18 +543,18 @@ impl CapitalizationManager {
 /// Commandes Tauri pour la capitalisation
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn capitalize_watch_result(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     watch_result_id: i64,
     user_id: Option<i64>,
 ) -> Result<CapitalizedInfo, String> {
-    let db = state.db.lock().unwrap();
+    let db = state.db.lock().await;
     
     let mut stmt = db.conn.prepare(
         "SELECT id, watch_id, title, url, content, translated_content, source_name, published_at, fetched_at, is_processed, metadata 
@@ -579,8 +581,8 @@ pub async fn capitalize_watch_result(
         entities: None,
     };
 
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
 
     let capitalization_manager = CapitalizationManager::new(
@@ -593,14 +595,14 @@ pub async fn capitalize_watch_result(
         Arc::clone(&state.db),
         super::watch::ApiClient::new(
             tor_client.create_tor_client()?,
-            state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+            state.settings.lock().await.api.mistral_key.clone(),
         ),
         Arc::new(super::watch::WatchManager::new(
             Arc::clone(&state.db),
             tor_client.create_tor_client()?,
             super::watch::ApiClient::new(
                 tor_client.create_tor_client()?,
-                state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+                state.settings.lock().await.api.mistral_key.clone(),
             ),
         )),
     );
@@ -611,19 +613,19 @@ pub async fn capitalize_watch_result(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn capitalize_event_group(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     event_group: EventGroup,
     user_id: Option<i64>,
 ) -> Result<Vec<CapitalizedInfo>, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
 
     let capitalization_manager = CapitalizationManager::new(
@@ -635,21 +637,21 @@ pub async fn capitalize_event_group(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn validate_capitalized_info(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     capitalized_info_id: i64,
     user_id: i64,
     is_valid: bool,
     comments: Option<String>,
 ) -> Result<(), String> {
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
 
     let capitalization_manager = CapitalizationManager::new(
@@ -661,18 +663,18 @@ pub async fn validate_capitalized_info(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_unvalidated_capitalized_infos(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     limit: Option<usize>,
 ) -> Result<Vec<CapitalizedInfo>, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
 
     let capitalization_manager = CapitalizationManager::new(
@@ -684,18 +686,18 @@ pub async fn get_unvalidated_capitalized_infos(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_capitalized_infos_by_watch(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     watch_id: i64,
 ) -> Result<Vec<CapitalizedInfo>, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
 
     let capitalization_manager = CapitalizationManager::new(
@@ -707,19 +709,19 @@ pub async fn get_capitalized_infos_by_watch(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn auto_capitalize_watch_result(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     watch_result_id: i64,
     user_id: Option<i64>,
 ) -> Result<CapitalizedInfo, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
 
     let capitalization_manager = CapitalizationManager::new(
@@ -727,7 +729,7 @@ pub async fn auto_capitalize_watch_result(
         tor_client.create_tor_client()?,
     ).with_api_client(mistral_client);
 
-    let db = state.db.lock().unwrap();
+    let db = state.db.lock().await;
     
     let mut stmt = db.conn.prepare(
         "SELECT id, watch_id, title, url, content, translated_content, source_name, published_at, fetched_at, is_processed, metadata 

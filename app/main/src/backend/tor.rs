@@ -1,5 +1,6 @@
-//! Module de gestion de TOR
-//! Gère le daemon TOR, la sélection des nœuds de sortie et les requêtes proxy
+use crate::AppState;
+// Module de gestion de TOR
+// Gère le daemon TOR, la sélection des nœuds de sortie et les requêtes proxy
 
 use std::process::{Command, Child, Stdio};
 use std::path::PathBuf;
@@ -405,8 +406,8 @@ impl TorManager {
 /// Client HTTP configuré pour utiliser TOR
 #[derive(Clone)]
 pub struct TorClient {
-    client: Client,
-    socks_port: u16,
+    pub client: Client,
+    pub socks_port: u16,
 }
 
 impl TorClient {
@@ -440,50 +441,50 @@ impl TorClient {
 /// Commandes Tauri pour TOR
 
 
-#[tauri::command]
-pub fn get_tor_status(
+#[allow(dead_code)]
+pub async fn get_tor_status(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<TorStatus, String> {
-    let tor_manager = state.tor_manager.lock().unwrap();
+        state: &crate::AppState) -> Result<TorStatus, String> {
+    let tor_manager = state.tor_manager.lock().await;
     Ok(tor_manager.get_status())
 }
 
 
-#[tauri::command]
-pub fn get_tor_exit_nodes(
+#[allow(dead_code)]
+pub async fn get_tor_exit_nodes(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<Vec<TorExitNode>, String> {
-    let tor_manager = state.tor_manager.lock().unwrap();
+        state: &crate::AppState) -> Result<Vec<TorExitNode>, String> {
+    let tor_manager = state.tor_manager.lock().await;
     Ok(tor_manager.get_exit_nodes())
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn test_tor_connection(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<bool, String> {
-    let tor_manager = state.tor_manager.lock().unwrap();
+        state: &crate::AppState) -> Result<bool, String> {
+    let tor_manager = state.tor_manager.lock().await;
     tor_manager.test_tor_connection().await.map_err(|e| e.to_string())
 }
 
 
-#[tauri::command]
-pub fn refresh_tor_exit_nodes(
+#[allow(dead_code)]
+pub async fn refresh_tor_exit_nodes(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<Vec<TorExitNode>, String> {
-    let mut tor_manager = state.tor_manager.lock().unwrap();
+        state: &crate::AppState) -> Result<Vec<TorExitNode>, String> {
+    let mut tor_manager = state.tor_manager.lock().await;
     tor_manager.refresh_exit_nodes()?;
     Ok(tor_manager.get_exit_nodes())
 }

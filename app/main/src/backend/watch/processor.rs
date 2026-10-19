@@ -1,5 +1,6 @@
-//! Module de traitement des résultats de veille
-//! Gère le NER, la cotation et la capitalisation
+use crate::AppState;
+// Module de traitement des résultats de veille
+// Gère le NER, la cotation et la capitalisation
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -31,7 +32,7 @@ impl WatchProcessor {
 
     /// Traite tous les résultats non traités
     pub async fn process_unprocessed_results(&self) -> Result<Vec<ProcessedWatchResult>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let unprocessed_results = db.get_unprocessed_watch_results()?;
 
         info!("Traitement de {} résultats de veille non traités", unprocessed_results.len());
@@ -98,7 +99,7 @@ impl WatchProcessor {
 
         for entity in entities {
             // Vérifier si l'entité existe déjà dans la base
-            let db = self.db.lock().unwrap();
+            let db = self.db.lock().await;
             let existing_entity = db.get_entity_by_name(&entity.name, &entity.entity_type)?;
 
             let enriched_entity = super::EntityReference {
@@ -260,14 +261,14 @@ impl WatchProcessor {
 /// Commandes Tauri pour le traitement des résultats
 
 
-#[tauri::command]
-pub fn get_processed_watch_results(
+#[allow(dead_code)]
+pub async fn get_processed_watch_results(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<Vec<ProcessedWatchResult>, String> {
-    let db = state.db.lock().unwrap();
+        state: &crate::AppState) -> Result<Vec<ProcessedWatchResult>, String> {
+    let db = state.db.lock().await;
     let unprocessed_results = db.get_unprocessed_watch_results()?;
 
     // Pour l'instant, on retourne les résultats non traités
@@ -296,18 +297,18 @@ pub fn get_processed_watch_results(
 }
 
 
-#[tauri::command]
-pub fn process_watch_results(
+#[allow(dead_code)]
+pub async fn process_watch_results(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<Vec<ProcessedWatchResult>, String> {
+        state: &crate::AppState) -> Result<Vec<ProcessedWatchResult>, String> {
     let db = Arc::clone(&state.db);
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
     let watch_manager = Arc::clone(&state.entity_manager);
 
@@ -325,7 +326,7 @@ pub fn process_watch_results(
 }
 
 
-#[tauri::command]
-pub fn group_results_by_event(results: Vec<ProcessedWatchResult>) -> Vec<EventGroup> {
+#[allow(dead_code)]
+pub async fn group_results_by_event(results: Vec<ProcessedWatchResult>) -> Vec<EventGroup> {
     WatchProcessor::group_by_event(results)
 }

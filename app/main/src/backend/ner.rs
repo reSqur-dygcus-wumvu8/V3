@@ -1,5 +1,6 @@
-//! Module de Reconnaissance d'Entités Nominales (NER)
-//! Gère l'extraction et la classification d'entités via Mistral API
+use crate::AppState;
+// Module de Reconnaissance d'Entités Nominales (NER)
+// Gère l'extraction et la classification d'entités via Mistral API
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -226,7 +227,7 @@ impl NerManager {
         let mut matched_entities = Vec::new();
 
         for entity in ner_result.entities {
-            let db = self.db.lock().unwrap();
+            let db = self.db.lock().await;
             
             // Rechercher des entités similaires dans la base
             let similar_entities = db.search_entities(
@@ -355,7 +356,7 @@ impl NerManager {
         ner_result: &NerResult,
         source_id: Option<i64>,
     ) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         // Sauvegarder le résultat du NER
@@ -464,21 +465,21 @@ fn levenshtein_distance(a: &str, b: &str) -> usize {
 /// Commandes Tauri pour le NER
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn extract_entities(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     text: String,
     language: Option<String>,
 ) -> Result<NerResult, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     let ner_manager = NerManager::new(Arc::clone(&state.db), api_client);
@@ -486,21 +487,21 @@ pub async fn extract_entities(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn extract_and_match_entities(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     text: String,
     language: Option<String>,
 ) -> Result<Vec<MatchedEntity>, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     let ner_manager = NerManager::new(Arc::clone(&state.db), api_client);
@@ -508,21 +509,21 @@ pub async fn extract_and_match_entities(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn extract_relations(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     text: String,
     entities: Vec<DetectedEntity>,
 ) -> Result<Vec<EntityRelation>, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     let ner_manager = NerManager::new(Arc::clone(&state.db), api_client);
@@ -530,22 +531,22 @@ pub async fn extract_relations(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn save_ner_result(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     text: String,
     ner_result: NerResult,
     source_id: Option<i64>,
 ) -> Result<i64, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     let ner_manager = NerManager::new(Arc::clone(&state.db), api_client);
@@ -553,8 +554,8 @@ pub async fn save_ner_result(
 }
 
 
-#[tauri::command]
-pub fn get_entity_types() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_entity_types() -> Vec<String> {
     vec![
         DetectedEntityType::Individual.as_str().to_string(),
         DetectedEntityType::Organization.as_str().to_string(),

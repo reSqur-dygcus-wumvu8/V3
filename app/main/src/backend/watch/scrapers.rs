@@ -1,5 +1,6 @@
-//! Scrapers pour les moteurs de recherche et réseaux sociaux
-//! Gère la récupération des résultats depuis Google, Qwant, Yandex, etc.
+use crate::AppState;
+// Scrapers pour les moteurs de recherche et réseaux sociaux
+// Gère la récupération des résultats depuis Google, Qwant, Yandex, etc.
 
 use std::time::Duration;
 use anyhow::{Result, Context};

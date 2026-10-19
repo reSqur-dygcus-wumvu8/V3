@@ -1,5 +1,6 @@
-//! Module de veille internet
-//! Gère la configuration, l'exécution et le traitement des veilles
+use crate::AppState;
+// Module de veille internet
+// Gère la configuration, l'exécution et le traitement des veilles
 
 pub mod scrapers;
 pub mod scheduler;
@@ -255,7 +256,7 @@ impl WatchManager {
 
     /// Récupère toutes les veilles
     pub fn get_watches(&self) -> Result<Vec<Watch>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let mut stmt = db.conn.prepare(
             "SELECT id, name, query, language, sources, frequency_minutes, is_active, created_at, updated_at 
              FROM watches 
@@ -286,7 +287,7 @@ impl WatchManager {
 
     /// Ajoute une nouvelle veille
     pub fn add_watch(&self, watch: Watch) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let sources_json = serde_json::to_string(&watch.sources).unwrap_or_default();
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -310,7 +311,7 @@ impl WatchManager {
 
     /// Met à jour une veille
     pub fn update_watch(&self, watch: Watch) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let sources_json = serde_json::to_string(&watch.sources).unwrap_or_default();
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -337,7 +338,7 @@ impl WatchManager {
 
     /// Supprime une veille
     pub fn delete_watch(&self, id: i64) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         db.conn.execute(
             "DELETE FROM watches WHERE id = ?",
             [id],
@@ -348,7 +349,7 @@ impl WatchManager {
 
     /// Récupère les résultats d'une veille
     pub fn get_watch_results(&self, watch_id: i64) -> Result<Vec<WatchResult>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let mut stmt = db.conn.prepare(
             "SELECT id, watch_id, title, url, content, translated_content, source_name, published_at, fetched_at, is_processed, metadata 
              FROM watch_results 
@@ -382,7 +383,7 @@ impl WatchManager {
 
     /// Sauvegarde un résultat de veille
     pub fn save_watch_result(&self, result: WatchResult) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let metadata_json = result.metadata.map(|m| serde_json::to_string(&m).unwrap_or_default())
             .unwrap_or_default();
         let now = chrono::Utc::now().to_rfc3339();
@@ -409,7 +410,7 @@ impl WatchManager {
 
     /// Marque un résultat comme traité
     pub fn mark_result_processed(&self, result_id: i64) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         db.conn.execute(
             "UPDATE watch_results SET is_processed = 1 WHERE id = ?",
             [result_id],
@@ -422,61 +423,61 @@ impl WatchManager {
 /// Commandes Tauri pour les veilles
 
 
-#[tauri::command]
-pub fn get_watches(
+#[allow(dead_code)]
+pub async fn get_watches(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<Vec<Watch>, String> {
-    let watch_manager = state.entity_manager.lock().unwrap();
+        state: &crate::AppState) -> Result<Vec<Watch>, String> {
+    let watch_manager = state.entity_manager.lock().await;
     watch_manager.get_watches()
 }
 
 
-#[tauri::command]
-pub fn add_watch(
+#[allow(dead_code)]
+pub async fn add_watch(
     
         
         
             
-        state: tauri::State<crate::AppState>, watch: Watch) -> Result<i64, String> {
-    let watch_manager = state.entity_manager.lock().unwrap();
+        state: &crate::AppState, watch: Watch) -> Result<i64, String> {
+    let watch_manager = state.entity_manager.lock().await;
     watch_manager.add_watch(watch)
 }
 
 
-#[tauri::command]
-pub fn update_watch(
+#[allow(dead_code)]
+pub async fn update_watch(
     
         
         
             
-        state: tauri::State<crate::AppState>, watch: Watch) -> Result<(), String> {
-    let watch_manager = state.entity_manager.lock().unwrap();
+        state: &crate::AppState, watch: Watch) -> Result<(), String> {
+    let watch_manager = state.entity_manager.lock().await;
     watch_manager.update_watch(watch)
 }
 
 
-#[tauri::command]
-pub fn delete_watch(
+#[allow(dead_code)]
+pub async fn delete_watch(
     
         
         
             
-        state: tauri::State<crate::AppState>, id: i64) -> Result<(), String> {
-    let watch_manager = state.entity_manager.lock().unwrap();
+        state: &crate::AppState, id: i64) -> Result<(), String> {
+    let watch_manager = state.entity_manager.lock().await;
     watch_manager.delete_watch(id)
 }
 
 
-#[tauri::command]
-pub fn get_watch_results(
+#[allow(dead_code)]
+pub async fn get_watch_results(
     
         
         
             
-        state: tauri::State<crate::AppState>, watch_id: i64) -> Result<Vec<WatchResult>, String> {
-    let watch_manager = state.entity_manager.lock().unwrap();
+        state: &crate::AppState, watch_id: i64) -> Result<Vec<WatchResult>, String> {
+    let watch_manager = state.entity_manager.lock().await;
     watch_manager.get_watch_results(watch_id)
 }

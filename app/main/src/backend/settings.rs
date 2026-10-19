@@ -1,4 +1,5 @@
-//! Gestion des paramètres de l'application
+use crate::AppState;
+// Gestion des paramètres de l'application
 
 use serde::{Serialize, Deserialize};
 use std::fs;
@@ -25,7 +26,7 @@ impl AppSettings {
     /// Charge les paramètres depuis le fichier de configuration
     pub fn load() -> Result<Self, String> {
         let settings_dir = dirs::config_dir()
-            .ok_or("Impossible de trouver le dossier de configuration")?
+            .ok_or("Impossible de trouver le dossier de configuration").map_err(|e| e.to_string())?
             .join("osint_app");
         
         fs::create_dir_all(&settings_dir).map_err(|e| e.to_string())?;
@@ -55,7 +56,7 @@ impl AppSettings {
     /// Sauvegarde les paramètres dans le fichier de configuration
     pub fn save(&self) -> Result<(), String> {
         let settings_dir = dirs::config_dir()
-            .ok_or("Impossible de trouver le dossier de configuration")?
+            .ok_or("Impossible de trouver le dossier de configuration").map_err(|e| e.to_string())?
             .join("osint_app");
         
         fs::create_dir_all(&settings_dir).map_err(|e| e.to_string())?;
@@ -85,20 +86,20 @@ impl Default for AppSettings {
 
 /// Récupère les paramètres de l'application
 
-#[tauri::command]
-pub fn get_settings() -> Result<AppSettings, String> {
+#[allow(dead_code)]
+pub async fn get_settings() -> Result<AppSettings, String> {
     AppSettings::load()
 }
 
 /// Sauvegarde les paramètres de l'application
 
-#[tauri::command]
-pub fn save_settings(settings: AppSettings) -> Result<(), String> {
+#[allow(dead_code)]
+pub async fn save_settings(settings: AppSettings) -> Result<(), String> {
     settings.save()
 }
 
 /// Récupère le chemin du socket IPC pour la communication avec l'app Secrets
-pub fn get_secrets_socket_path() -> PathBuf {
+pub async fn get_secrets_socket_path() -> PathBuf {
     let config_dir = dirs::config_dir()
         .unwrap_or_else(|| PathBuf::from("/tmp"))
         .join("osint_app");

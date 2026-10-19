@@ -1,5 +1,6 @@
-//! Module de détection et gestion des doublons
-//! Gère l'identification et la fusion des entités en double
+use crate::AppState;
+// Module de détection et gestion des doublons
+// Gère l'identification et la fusion des entités en double
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -66,7 +67,7 @@ impl DeduplicationManager {
     ) -> Result<DuplicateResult, String> {
         info!("Vérification des doublons pour {}: {}", entity_type.as_str(), name);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         
         // Récupérer les entités existantes du même type
         let existing_entities = db.get_entities_by_type(entity_type.clone())?;
@@ -220,13 +221,13 @@ impl DeduplicationManager {
             source_entity_type.as_str(), source_entity_id, target_entity_type.as_str(), target_entity_id
         );
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         // Vérifier que les entités existent
-        let source_entity = db.get_entity_by_id(source_entity_type.clone(), source_entity_id)?
+        let source_entity = db.get_entity_by_id(source_entity_type.clone(), source_entity_id).map_err(|e| e.to_string())?
             .ok_or("Entité source non trouvée")?;
         
-        let target_entity = db.get_entity_by_id(target_entity_type.clone(), target_entity_id)?
+        let target_entity = db.get_entity_by_id(target_entity_type.clone(), target_entity_id).map_err(|e| e.to_string())?
             .ok_or("Entité cible non trouvée")?;
 
         // Déterminer quelle entité conserver
@@ -342,7 +343,7 @@ impl DeduplicationManager {
     ) -> Result<Vec<DuplicateResult>, String> {
         info!("Nettoyage des doublons pour le type: {}", entity_type.as_str());
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let existing_entities = db.get_entities_by_type(entity_type.clone())?;
 
         let mut results = Vec::new();
@@ -443,14 +444,14 @@ fn levenshtein_distance(a: &str, b: &str) -> usize {
 /// Commandes Tauri pour la détection de doublons
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn check_duplicates(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     name: String,
     description: Option<String>,
@@ -473,14 +474,14 @@ pub async fn check_duplicates(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn merge_entities(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     source_entity_type: String,
     source_entity_id: i64,
     target_entity_type: String,
@@ -498,14 +499,14 @@ pub async fn merge_entities(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn cleanup_duplicates(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     strategy: Option<String>,
     auto_merge: bool,
@@ -527,8 +528,8 @@ pub async fn cleanup_duplicates(
 }
 
 
-#[tauri::command]
-pub fn get_deduplication_strategies() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_deduplication_strategies() -> Vec<String> {
     vec![
         "exact".to_string(),
         "case_insensitive".to_string(),

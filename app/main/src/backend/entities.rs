@@ -1,5 +1,6 @@
-//! Module de gestion des entités de la base de connaissance
-//! Gère la création, modification, recherche et suppression des entités
+use crate::AppState;
+// Module de gestion des entités de la base de connaissance
+// Gère la création, modification, recherche et suppression des entités
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -285,7 +286,7 @@ impl EntityManager {
     ) -> Result<i64, String> {
         info!("Création de l'entité: {} ({})", name, entity_type.as_str());
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         // Vérifier les doublons
@@ -354,7 +355,7 @@ impl EntityManager {
     ) -> Result<i64, String> {
         info!("Création de l'individu: {}", full_name);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         // Si c'est un individu fictif ou numérique, vérifier qu'il est lié à un individu réel
@@ -416,7 +417,7 @@ impl EntityManager {
     ) -> Result<i64, String> {
         info!("Création de l'organisation: {}", name);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let entity_id = db.conn.execute(
@@ -469,7 +470,7 @@ impl EntityManager {
     ) -> Result<i64, String> {
         info!("Création de l'événement: {}", name);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let entity_id = db.conn.execute(
@@ -521,7 +522,7 @@ impl EntityManager {
     ) -> Result<i64, String> {
         info!("Création du lieu: {}", name);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let entity_id = db.conn.execute(
@@ -571,7 +572,7 @@ impl EntityManager {
     ) -> Result<i64, String> {
         info!("Création de l'objet: {}", name);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let entity_id = db.conn.execute(
@@ -619,7 +620,7 @@ impl EntityManager {
     ) -> Result<i64, String> {
         info!("Création de la source: {}", name);
 
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let source_id = db.conn.execute(
@@ -647,7 +648,7 @@ impl EntityManager {
         entity_type: EntityType,
         entity_id: i64,
     ) -> Result<Option<serde_json::Value>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let table_name = match entity_type {
             EntityType::Individual => "individuals",
@@ -686,7 +687,7 @@ impl EntityManager {
         entity_id: i64,
         updates: serde_json::Value,
     ) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let table_name = match entity_type {
@@ -733,7 +734,7 @@ impl EntityManager {
         entity_type: EntityType,
         entity_id: i64,
     ) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let table_name = match entity_type {
             EntityType::Individual => "individuals",
@@ -759,7 +760,7 @@ impl EntityManager {
         entity_type: Option<EntityType>,
         limit: Option<usize>,
     ) -> Result<Vec<serde_json::Value>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let limit_clause = limit.map(|l| format!(" LIMIT {}", l)).unwrap_or_default();
 
@@ -840,7 +841,7 @@ impl EntityManager {
         target_id: i64,
         relation: &str,
     ) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let now = chrono::Utc::now().to_rfc3339();
 
         let link_id = db.conn.execute(
@@ -865,7 +866,7 @@ impl EntityManager {
         entity_type: EntityType,
         entity_id: i64,
     ) -> Result<Vec<serde_json::Value>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let query = format!(
             "SELECT * FROM entity_links 
@@ -904,7 +905,7 @@ impl EntityManager {
         entity_id: i64,
     ) -> Result<serde_json::Value, String> {
         // Récupérer l'entité
-        let entity = self.get_entity(entity_type.clone(), entity_id).await?
+        let entity = self.get_entity(entity_type.clone(), entity_id).await.map_err(|e| e.to_string())?
             .ok_or("Entité non trouvée")?;
 
         let name = entity.get("name").and_then(|v| v.as_str()).unwrap_or_default();
@@ -950,20 +951,20 @@ impl EntityManager {
 /// Commandes Tauri pour les entités
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn create_entity(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     name: String,
     description: Option<String>,
     cotation: Option<String>,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let entity_type_enum = EntityType::from_str(&entity_type)
         .ok_or_else(|| format!("Type d'entité inconnu: {}", entity_type))?;
     
@@ -973,14 +974,14 @@ pub async fn create_entity(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn create_individual(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     individual_type: String,
     first_name: Option<String>,
     last_name: Option<String>,
@@ -993,7 +994,7 @@ pub async fn create_individual(
     linked_real_individual_id: Option<i64>,
     cotation: Option<String>,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let individual_type_enum = IndividualType::from_str(&individual_type)
         .ok_or_else(|| format!("Type d'individu inconnu: {}", individual_type))?;
     
@@ -1015,14 +1016,14 @@ pub async fn create_individual(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn create_organization(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     name: String,
     organization_type: String,
     summary: Option<String>,
@@ -1032,7 +1033,7 @@ pub async fn create_organization(
     website: Option<String>,
     cotation: Option<String>,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let organization_type_enum = OrganizationType::from_str(&organization_type)
         .ok_or_else(|| format!("Type d'organisation inconnu: {}", organization_type))?;
     
@@ -1051,14 +1052,14 @@ pub async fn create_organization(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn create_event(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     name: String,
     date_time: Option<String>,
     end_date_time: Option<String>,
@@ -1067,7 +1068,7 @@ pub async fn create_event(
     location: Option<String>,
     cotation: Option<String>,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let cotation_enum = cotation.and_then(|c| OtanCotation::from_str(&c).ok());
 
     entity_manager.create_event(
@@ -1082,14 +1083,14 @@ pub async fn create_event(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn create_location(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     location_type: String,
     name: String,
     address: Option<String>,
@@ -1098,7 +1099,7 @@ pub async fn create_location(
     comments: Option<String>,
     cotation: Option<String>,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let location_type_enum = LocationType::from_str(&location_type)
         .ok_or_else(|| format!("Type de lieu inconnu: {}", location_type))?;
     
@@ -1116,21 +1117,21 @@ pub async fn create_location(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn create_object(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     object_type: String,
     name: String,
     details: Option<String>,
     comments: Option<String>,
     cotation: Option<String>,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let object_type_enum = ObjectType::from_str(&object_type)
         .ok_or_else(|| format!("Type d'objet inconnu: {}", object_type))?;
     
@@ -1146,37 +1147,37 @@ pub async fn create_object(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn create_source(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     name: String,
     description: Option<String>,
     url: Option<String>,
     reliability: Option<char>,
     comments: Option<String>,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     entity_manager.create_source(name, description, url, reliability, comments).await
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_entity(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     entity_id: i64,
 ) -> Result<Option<serde_json::Value>, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let entity_type_enum = EntityType::from_str(&entity_type)
         .ok_or_else(|| format!("Type d'entité inconnu: {}", entity_type))?;
     
@@ -1184,40 +1185,40 @@ pub async fn get_entity(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn search_entities(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     query: String,
     entity_type: Option<String>,
     limit: Option<usize>,
 ) -> Result<Vec<serde_json::Value>, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let entity_type_enum = entity_type.and_then(|t| EntityType::from_str(&t).ok());
     
     entity_manager.search_entities(&query, entity_type_enum, limit).await
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn link_entities(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     source_type: String,
     source_id: i64,
     target_type: String,
     target_id: i64,
     relation: String,
 ) -> Result<i64, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let source_type_enum = EntityType::from_str(&source_type)
         .ok_or_else(|| format!("Type d'entité source inconnu: {}", source_type))?;
     let target_type_enum = EntityType::from_str(&target_type)
@@ -1227,18 +1228,18 @@ pub async fn link_entities(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_entity_links(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     entity_id: i64,
 ) -> Result<Vec<serde_json::Value>, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let entity_type_enum = EntityType::from_str(&entity_type)
         .ok_or_else(|| format!("Type d'entité inconnu: {}", entity_type))?;
     
@@ -1246,18 +1247,18 @@ pub async fn get_entity_links(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn enrich_entity(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     entity_type: String,
     entity_id: i64,
 ) -> Result<serde_json::Value, String> {
-    let entity_manager = state.entity_manager.lock().unwrap();
+    let entity_manager = state.entity_manager.lock().await;
     let entity_type_enum = EntityType::from_str(&entity_type)
         .ok_or_else(|| format!("Type d'entité inconnu: {}", entity_type))?;
     
@@ -1265,8 +1266,8 @@ pub async fn enrich_entity(
 }
 
 
-#[tauri::command]
-pub fn get_individual_types() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_individual_types() -> Vec<String> {
     vec![
         IndividualType::Real.as_str().to_string(),
         IndividualType::Fictive.as_str().to_string(),
@@ -1275,8 +1276,8 @@ pub fn get_individual_types() -> Vec<String> {
 }
 
 
-#[tauri::command]
-pub fn get_location_types() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_location_types() -> Vec<String> {
     vec![
         LocationType::Real.as_str().to_string(),
         LocationType::Fictive.as_str().to_string(),
@@ -1285,8 +1286,8 @@ pub fn get_location_types() -> Vec<String> {
 }
 
 
-#[tauri::command]
-pub fn get_organization_types() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_organization_types() -> Vec<String> {
     vec![
         OrganizationType::Gouvernement.as_str().to_string(),
         OrganizationType::Entreprise.as_str().to_string(),
@@ -1301,8 +1302,8 @@ pub fn get_organization_types() -> Vec<String> {
 }
 
 
-#[tauri::command]
-pub fn get_object_types() -> Vec<String> {
+#[allow(dead_code)]
+pub async fn get_object_types() -> Vec<String> {
     vec![
         ObjectType::Vehicule.as_str().to_string(),
         ObjectType::Arme.as_str().to_string(),

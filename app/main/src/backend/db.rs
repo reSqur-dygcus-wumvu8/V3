@@ -1,4 +1,5 @@
-//! Module de gestion de la base de données SQLite avec chiffrement SQLCipher + MLA
+use crate::AppState;
+// Module de gestion de la base de données SQLite avec chiffrement SQLCipher + MLA
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -18,16 +19,16 @@ pub const DEFAULT_SQLCIPHER_KEY: &str = "default-key-change-me";
 
 /// Contexte de la base de données
 pub struct Database {
-    conn: Connection,
-    path: PathBuf,
-    mla_enabled: bool,
+    pub conn: Connection,
+    pub path: PathBuf,
+    pub mla_enabled: bool,
 }
 
 impl Database {
     /// Crée une nouvelle connexion à la base de données
     pub fn new(settings: &AppSettings) -> Result<Self> {
         // Déterminer le chemin de la base
-        let db_path = settings.shared.maps.cache_directory
+        let db_path = settings.maps.cache_directory
             .clone()
             .unwrap_or_else(|| {
                 dirs::data_dir()
@@ -898,14 +899,14 @@ impl Database {
 /// Commandes Tauri pour la base de données
 
 
-#[tauri::command]
-pub fn test_db_connection(
+#[allow(dead_code)]
+pub async fn test_db_connection(
     
         
         
             
-        state: tauri::State<crate::AppState>) -> Result<bool, String> {
-    let db = state.db.lock().unwrap();
+        state: &crate::AppState) -> Result<bool, String> {
+    let db = state.db.lock().await;
     
     // Tester la connexion en exécutant une requête simple
     let result = db.conn.execute_batch("SELECT 1");

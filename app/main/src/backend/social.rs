@@ -1,5 +1,6 @@
-//! Module de gestion des réseaux sociaux
-//! Gère la collecte et le traitement des données depuis Twitter/X, Discord, Telegram, TikTok, VKontakte
+use crate::AppState;
+// Module de gestion des réseaux sociaux
+// Gère la collecte et le traitement des données depuis Twitter/X, Discord, Telegram, TikTok, VKontakte
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -362,7 +363,7 @@ impl SocialMediaManager {
 
     /// Sauvegarde un compte de réseau social dans la base
     pub async fn save_social_account(&self, account: SocialAccount) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         
         let platform_str = account.platform.as_str();
         let now = chrono::Utc::now().to_rfc3339();
@@ -392,7 +393,7 @@ impl SocialMediaManager {
         platform: SocialPlatform,
         account_id: &str,
     ) -> Result<Option<SocialAccount>, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         let platform_str = platform.as_str();
 
         let mut stmt = db.conn.prepare(
@@ -430,7 +431,7 @@ impl SocialMediaManager {
         entity_type: &str,
         entity_id: i64,
     ) -> Result<(), String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         db.conn.execute(
             "INSERT INTO entity_social_accounts (entity_type, entity_id, account_id) 
@@ -445,22 +446,22 @@ impl SocialMediaManager {
 /// Commandes Tauri pour les réseaux sociaux
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn social_search(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     platform: String,
     query: String,
     limit: Option<usize>,
 ) -> Result<Vec<SocialSearchResult>, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     let social_manager = SocialMediaManager::new(
@@ -475,7 +476,7 @@ pub async fn social_search(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn get_social_platforms() -> Result<Vec<String>, String> {
     let platforms = vec![
         SocialPlatform::Twitter.as_str().to_string(),
@@ -488,14 +489,14 @@ pub async fn get_social_platforms() -> Result<Vec<String>, String> {
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn save_social_account(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     platform: String,
     account_id: String,
     username: String,
@@ -508,10 +509,10 @@ pub async fn save_social_account(
     let platform_enum = SocialPlatform::from_str(&platform)
         .ok_or_else(|| format!("Plateforme inconnue: {}", platform))?;
 
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = ApiClient::new(
         tor_client.create_tor_client()?,
-        state.settings.lock().unwrap().shared.api.mistral_key.clone(),
+        state.settings.lock().await.api.mistral_key.clone(),
     );
 
     let social_manager = SocialMediaManager::new(

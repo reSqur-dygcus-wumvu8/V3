@@ -1,5 +1,6 @@
-//! Module API générique pour les appels externes
-//! Gère les requêtes HTTP via TOR avec gestion des erreurs et retry
+use crate::AppState;
+// Module API générique pour les appels externes
+// Gère les requêtes HTTP via TOR avec gestion des erreurs et retry
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -498,38 +499,38 @@ pub struct MistralEmbeddingUsage {
 /// Commandes Tauri pour l'API générique
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn api_request(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     config: ApiRequestConfig,
 ) -> Result<ApiResponse, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = GenericApiClient::new(tor_client.create_tor_client()?);
     
     api_client.request(config).await
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn mistral_chat(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     model: String,
     messages: Vec<MistralMessage>,
     max_tokens: Option<u32>,
     temperature: Option<f64>,
 ) -> Result<MistralResponse, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
     
@@ -544,19 +545,19 @@ pub async fn mistral_chat(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn mistral_embeddings(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     model: String,
     input: Vec<String>,
 ) -> Result<MistralEmbeddingResponse, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
-    let api_key = state.settings.lock().unwrap().shared.api.mistral_key.clone();
+    let tor_client = state.tor_manager.lock().await;
+    let api_key = state.settings.lock().await.api.mistral_key.clone();
     
     let mistral_client = MistralApiClient::new(tor_client.create_tor_client()?, api_key);
     
@@ -564,17 +565,17 @@ pub async fn mistral_embeddings(
 }
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn check_api_health(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     url: String,
 ) -> Result<bool, String> {
-    let tor_client = state.tor_manager.lock().unwrap();
+    let tor_client = state.tor_manager.lock().await;
     let api_client = GenericApiClient::new(tor_client.create_tor_client()?);
     
     api_client.check_url_accessible(&url, None).await

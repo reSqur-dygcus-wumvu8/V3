@@ -1,5 +1,6 @@
-//! Module d'import de fichiers
-//! Gère l'import, la déduplication et le traitement initial
+use crate::AppState;
+// Module d'import de fichiers
+// Gère l'import, la déduplication et le traitement initial
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -91,7 +92,7 @@ impl FileImporter {
 
     /// Vérifie si un fichier est un doublon
     async fn is_duplicate(&self, hash: &str) -> Result<bool, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
         
         let count: i64 = db.conn.query_row(
             "SELECT COUNT(*) FROM imported_files WHERE hash = ?",
@@ -106,7 +107,7 @@ impl FileImporter {
     async fn save_file_locally(&self, name: &str, data: &[u8]) -> Result<PathBuf, String> {
         // Créer le dossier de stockage
         let storage_dir = dirs::data_dir()
-            .ok_or("Impossible de trouver le dossier de données")?
+            .ok_or("Impossible de trouver le dossier de données").map_err(|e| e.to_string())?
             .join("osint_app")
             .join("imports");
         
@@ -125,7 +126,7 @@ impl FileImporter {
 
     /// Crée ou obtient une source
     async fn get_or_create_source(&self, name: &str, rating: &str) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         // Vérifier si la source existe déjà
         let existing_source: Option<i64> = db.conn.query_row(
@@ -181,7 +182,7 @@ impl FileImporter {
         hash: &str,
         watch_id: Option<i64>,
     ) -> Result<i64, String> {
-        let db = self.db.lock().unwrap();
+        let db = self.db.lock().await;
 
         let file_id = db.conn.execute(
             "INSERT INTO imported_files (name, path, import_date, source_id, hash) VALUES (?, ?, ?, ?, ?)",
@@ -227,14 +228,14 @@ impl FileImporter {
 /// Commandes Tauri pour l'import de fichiers
 
 
-#[tauri::command]
+#[allow(dead_code)]
 pub async fn import_file(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     name: String,
     data: Vec<u8>,
     source_rating: String,
@@ -247,14 +248,14 @@ pub async fn import_file(
 }
 
 
-#[tauri::command]
-pub fn check_file_duplicate(
+#[allow(dead_code)]
+pub async fn check_file_duplicate(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     hash: String,
 ) -> Result<bool, String> {
     let importer = FileImporter::new(Arc::clone(&state.db));
@@ -262,17 +263,17 @@ pub fn check_file_duplicate(
 }
 
 
-#[tauri::command]
-pub fn get_source_by_name(
+#[allow(dead_code)]
+pub async fn get_source_by_name(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     name: String,
 ) -> Result<Option<i64>, String> {
-    let db = state.db.lock().unwrap();
+    let db = state.db.lock().await;
     
     let source_id: Option<i64> = db.conn.query_row(
         "SELECT id FROM sources WHERE name = ?",
@@ -284,14 +285,14 @@ pub fn get_source_by_name(
 }
 
 
-#[tauri::command]
-pub fn create_source(
+#[allow(dead_code)]
+pub async fn create_source(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     name: String,
     description: Option<String>,
     reliability: String,
@@ -301,14 +302,14 @@ pub fn create_source(
 }
 
 
-#[tauri::command]
-pub fn process_file_with_ner(
+#[allow(dead_code)]
+pub async fn process_file_with_ner(
     
     
         
         
             
-        state: tauri::State<crate::AppState>,
+        state: &crate::AppState,
     file_id: i64,
     watch_id: Option<i64>,
 ) -> Result<(), String> {
