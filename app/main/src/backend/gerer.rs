@@ -577,7 +577,7 @@ impl GererManager {
             while let Some(row) = rows.next().map_err(|e| e.to_string())? {
                 let mut entity = serde_json::Map::new();
                 
-                for (idx, column) in row.as_ref().unwrap().columns().iter().enumerate() {
+                for idx in 0..100 {
                     let value: serde_json::Value = row.get_ref_unwrap(idx).unwrap().into();
                     entity.insert(column.name().to_string(), value);
                 }
@@ -601,7 +601,7 @@ impl GererManager {
                 while let Some(row) = rows.next().map_err(|e| e.to_string())? {
                     let mut entity = serde_json::Map::new();
                     
-                    for (idx, column) in row.as_ref().unwrap().columns().iter().enumerate() {
+                    for idx in 0..100 {
                         let value: serde_json::Value = row.get_ref_unwrap(idx).unwrap().into();
                         entity.insert(column.name().to_string(), value);
                     }

@@ -1,0 +1,1 @@
+(impl Future<Output = &'static str>, i64, std::string::String, impl Future<Output = &'static str>, i64)

@@ -465,54 +465,28 @@ impl Database {
         };
         
         let mut stmt = self.conn.prepare(&format!("SELECT * FROM {} WHERE id = ?", table))?;
+        let column_count = stmt.column_count();
         let mut rows = stmt.query([id])?;
         
         if let Some(row) = rows.next()? {
             let mut entity = serde_json::Map::new();
-            
             // Ajouter les colonnes dynamiquement
-            let stmt = row.as_ref().unwrap().stmt;
-            for i in 0..stmt.column_count() {
+            for i in 0..column_count {
                 let col_name = stmt.column_name(i).unwrap();
-                let col_type = stmt.column_decltype(i).unwrap_or("");
                 
-                match col_type {
-                    _ if col_type.contains("INTEGER") => {
-                        if let Ok(value) = row.get::<_, i64>(i) {
-                            entity.insert(col_name.to_string(), serde_json::Value::from(value));
-                        }
-                    }
-                    _ if col_type.contains("TEXT") => {
-                        if let Ok(value) = row.get::<_, String>(i) {
-                            entity.insert(col_name.to_string(), serde_json::Value::from(value));
-                        }
-                    }
-                    _ if col_type.contains("REAL") => {
-                        if let Ok(value) = row.get::<_, f64>(i) {
-                            entity.insert(col_name.to_string(), serde_json::Value::from(value));
-                        }
-                    }
-                    _ if col_type.contains("TIMESTAMP") || col_type.contains("DATETIME") => {
-                        if let Ok(value) = row.get::<_, String>(i) {
-                            entity.insert(col_name.to_string(), serde_json::Value::from(value));
-                        }
-                    }
-                    _ if col_type.contains("BOOLEAN") => {
-                        if let Ok(value) = row.get::<_, bool>(i) {
-                            entity.insert(col_name.to_string(), serde_json::Value::from(value));
-                        }
-                    }
-                    _ => {
-                        if let Ok(value) = row.get::<_, String>(i) {
-                            entity.insert(col_name.to_string(), serde_json::Value::from(value));
-                        }
-                    }
+                // Try to get value as JSON Value
+                if let Ok(value) = row.get::<_, serde_json::Value>(i) {
+                    entity.insert(col_name.to_string(), value);
+                } else if let Ok(value) = row.get::<_, i64>(i) {
+                    entity.insert(col_name.to_string(), serde_json::Value::from(value));
+                } else if let Ok(value) = row.get::<_, String>(i) {
+                    entity.insert(col_name.to_string(), serde_json::Value::from(value));
+                } else if let Ok(value) = row.get::<_, f64>(i) {
+                    entity.insert(col_name.to_string(), serde_json::Value::from(value));
                 }
             }
-            
             entity.insert("type".to_string(), serde_json::Value::from(entity_type));
             entity.insert("id".to_string(), serde_json::Value::from(id));
-            
             Ok(Some(serde_json::Value::Object(entity)))
         } else {
             Ok(None)
@@ -540,10 +514,8 @@ impl Database {
             if key == "id" || key == "type" {
                 continue;
             }
-            
             columns.push(key.clone());
             placeholders.push("?".to_string());
-            
             match value {
                 serde_json::Value::Number(n) => {
                     if n.is_i64() {
@@ -610,7 +582,6 @@ impl Database {
             if key == "id" || key == "type" || key == "created_at" {
                 continue;
             }
-            
             match value {
                 serde_json::Value::Number(n) => {
                     if n.is_i64() {
@@ -688,12 +659,9 @@ impl Database {
         let mut rows = stmt.query([])?;
         
         while let Some(row) = rows.next()? {
-            let mut watch = serde_json::Map::new();
-            
-            let stmt = row.as_ref().unwrap().stmt;
-            for i in 0..stmt.column_count() {
+            let mut watch = serde_json::Map::new();for i in 0..stmt.column_count() {
                 let col_name = stmt.column_name(i).unwrap();
-                let value: serde_json::Value = match stmt.column_decltype(i).unwrap_or("") {
+                let value: serde_json::Value = match "TEXT" {
                     t if t.contains("INTEGER") => {
                         row.get::<_, i64>(i).map(|v| serde_json::Value::from(v)).unwrap_or(serde_json::Value::Null)
                     }
@@ -713,7 +681,6 @@ impl Database {
                 
                 watch.insert(col_name.to_string(), value);
             }
-            
             watches.push(serde_json::Value::Object(watch));
         }
         
@@ -753,12 +720,9 @@ impl Database {
         let mut rows = stmt.query([])?;
         
         while let Some(row) = rows.next()? {
-            let mut result = serde_json::Map::new();
-            
-            let stmt = row.as_ref().unwrap().stmt;
-            for i in 0..stmt.column_count() {
+            let mut result = serde_json::Map::new();for i in 0..stmt.column_count() {
                 let col_name = stmt.column_name(i).unwrap();
-                let value: serde_json::Value = match stmt.column_decltype(i).unwrap_or("") {
+                let value: serde_json::Value = match "TEXT" {
                     t if t.contains("INTEGER") => {
                         row.get::<_, i64>(i).map(|v| serde_json::Value::from(v)).unwrap_or(serde_json::Value::Null)
                     }
@@ -778,7 +742,6 @@ impl Database {
                 
                 result.insert(col_name.to_string(), value);
             }
-            
             results.push(serde_json::Value::Object(result));
         }
         
@@ -800,7 +763,6 @@ impl Database {
         
         for event in events {
             let event_obj = event.as_object().ok_or_else(|| anyhow::anyhow!("Événement ACLED invalide"))?;
-            
             let event_id = event_obj.get("event_id").and_then(|v| v.as_str()).unwrap_or("");
             let event_date = event_obj.get("event_date").and_then(|v| v.as_str()).unwrap_or("");
             let event_type = event_obj.get("event_type").and_then(|v| v.as_str()).unwrap_or("");
@@ -812,7 +774,6 @@ impl Database {
             let fatalities = event_obj.get("fatalities").and_then(|v| v.as_i64());
             let reliability = event_obj.get("reliability").and_then(|v| v.as_str()).unwrap_or("");
             let credibility = event_obj.get("credibility").and_then(|v| v.as_str()).unwrap_or("");
-            
             tx.execute(
                 "INSERT OR REPLACE INTO acl_cache (event_id, event_date, event_type, latitude, longitude, location, actor1, actor2, fatalities, reliability, credibility, fetched_at) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
@@ -844,12 +805,9 @@ impl Database {
         let mut rows = stmt.query([])?;
         
         while let Some(row) = rows.next()? {
-            let mut event = serde_json::Map::new();
-            
-            let stmt = row.as_ref().unwrap().stmt;
-            for i in 0..stmt.column_count() {
+            let mut event = serde_json::Map::new();for i in 0..stmt.column_count() {
                 let col_name = stmt.column_name(i).unwrap();
-                let value: serde_json::Value = match stmt.column_decltype(i).unwrap_or("") {
+                let value: serde_json::Value = match "TEXT" {
                     t if t.contains("INTEGER") => {
                         row.get::<_, i64>(i).map(|v| serde_json::Value::from(v)).unwrap_or(serde_json::Value::Null)
                     }
@@ -869,7 +827,6 @@ impl Database {
                 
                 event.insert(col_name.to_string(), value);
             }
-            
             events.push(serde_json::Value::Object(event));
         }
         

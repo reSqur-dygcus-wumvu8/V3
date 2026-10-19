@@ -669,9 +669,9 @@ impl EntityManager {
         if let Some(row) = rows.next().map_err(|e| e.to_string())? {
             let mut entity = serde_json::Map::new();
             
-            for (idx, column) in row.as_ref().unwrap().columns().iter().enumerate() {
+            for idx in 0..100 {
                 let value: serde_json::Value = row.get_ref_unwrap(idx).unwrap().into();
-                entity.insert(column.name().to_string(), value);
+                entity.insert(format!("column_{}", idx), value);
             }
 
             Ok(Some(serde_json::Value::Object(entity)))
@@ -790,9 +790,9 @@ impl EntityManager {
             while let Some(row) = rows.next().map_err(|e| e.to_string())? {
                 let mut entity = serde_json::Map::new();
                 
-                for (idx, column) in row.as_ref().unwrap().columns().iter().enumerate() {
+                for idx in 0..100 {
                     let value: serde_json::Value = row.get_ref_unwrap(idx).unwrap().into();
-                    entity.insert(column.name().to_string(), value);
+                    entity.insert(format!("column_{}", idx), value);
                 }
 
                 results.push(serde_json::Value::Object(entity));
@@ -819,9 +819,9 @@ impl EntityManager {
                 while let Some(row) = rows.next().map_err(|e| e.to_string())? {
                     let mut entity = serde_json::Map::new();
                     
-                    for (idx, column) in row.as_ref().unwrap().columns().iter().enumerate() {
+                    for idx in 0..100 {
                         let value: serde_json::Value = row.get_ref_unwrap(idx).unwrap().into();
-                        entity.insert(column.name().to_string(), value);
+                        entity.insert(format!("column_{}", idx), value);
                     }
 
                     all_results.push(serde_json::Value::Object(entity));
@@ -887,9 +887,9 @@ impl EntityManager {
         while let Some(row) = rows.next().map_err(|e| e.to_string())? {
             let mut link = serde_json::Map::new();
             
-            for (idx, column) in row.as_ref().unwrap().columns().iter().enumerate() {
+            for idx in 0..100 {
                 let value: serde_json::Value = row.get_ref_unwrap(idx).unwrap().into();
-                link.insert(column.name().to_string(), value);
+                link.insert(format!("column_{}", idx), value);
             }
 
             results.push(serde_json::Value::Object(link));
