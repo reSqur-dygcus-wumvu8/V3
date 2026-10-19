@@ -470,9 +470,10 @@ impl Database {
             let mut entity = serde_json::Map::new();
             
             // Ajouter les colonnes dynamiquement
-            for i in 0..row.column_count() {
-                let col_name = row.column_name(i).unwrap();
-                let col_type = row.column_decltype(i).unwrap_or("");
+            let stmt = row.as_ref().unwrap().stmt;
+            for i in 0..stmt.column_count() {
+                let col_name = stmt.column_name(i).unwrap();
+                let col_type = stmt.column_decltype(i).unwrap_or("");
                 
                 match col_type {
                     _ if col_type.contains("INTEGER") => {
@@ -688,9 +689,10 @@ impl Database {
         while let Some(row) = rows.next()? {
             let mut watch = serde_json::Map::new();
             
-            for i in 0..row.column_count() {
-                let col_name = row.column_name(i).unwrap();
-                let value: serde_json::Value = match row.column_decltype(i).unwrap_or("") {
+            let stmt = row.as_ref().unwrap().stmt;
+            for i in 0..stmt.column_count() {
+                let col_name = stmt.column_name(i).unwrap();
+                let value: serde_json::Value = match stmt.column_decltype(i).unwrap_or("") {
                     t if t.contains("INTEGER") => {
                         row.get::<_, i64>(i).map(|v| serde_json::Value::from(v)).unwrap_or(serde_json::Value::Null)
                     }
@@ -752,9 +754,10 @@ impl Database {
         while let Some(row) = rows.next()? {
             let mut result = serde_json::Map::new();
             
-            for i in 0..row.column_count() {
-                let col_name = row.column_name(i).unwrap();
-                let value: serde_json::Value = match row.column_decltype(i).unwrap_or("") {
+            let stmt = row.as_ref().unwrap().stmt;
+            for i in 0..stmt.column_count() {
+                let col_name = stmt.column_name(i).unwrap();
+                let value: serde_json::Value = match stmt.column_decltype(i).unwrap_or("") {
                     t if t.contains("INTEGER") => {
                         row.get::<_, i64>(i).map(|v| serde_json::Value::from(v)).unwrap_or(serde_json::Value::Null)
                     }
@@ -842,9 +845,10 @@ impl Database {
         while let Some(row) = rows.next()? {
             let mut event = serde_json::Map::new();
             
-            for i in 0..row.column_count() {
-                let col_name = row.column_name(i).unwrap();
-                let value: serde_json::Value = match row.column_decltype(i).unwrap_or("") {
+            let stmt = row.as_ref().unwrap().stmt;
+            for i in 0..stmt.column_count() {
+                let col_name = stmt.column_name(i).unwrap();
+                let value: serde_json::Value = match stmt.column_decltype(i).unwrap_or("") {
                     t if t.contains("INTEGER") => {
                         row.get::<_, i64>(i).map(|v| serde_json::Value::from(v)).unwrap_or(serde_json::Value::Null)
                     }
