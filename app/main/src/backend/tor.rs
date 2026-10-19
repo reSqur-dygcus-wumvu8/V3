@@ -423,11 +423,11 @@ impl TorClient {
     }
     
     pub async fn get(&self, url: &str) -> Result<reqwest::Response> {
-        self.client.get(url).send().await
+        self.client.get(url).send().await.map_err(|e| anyhow::anyhow!(e))
     }
     
     pub async fn post(&self, url: &str, body: serde_json::Value) -> Result<reqwest::Response> {
-        self.client.post(url).json(&body).send().await
+        self.client.post(url).json(&body).send().await.map_err(|e| anyhow::anyhow!(e))
     }
     
     pub async fn with_exit_node(self, node: &TorExitNode) -> Result<Self> {
@@ -449,7 +449,7 @@ pub async fn get_tor_status(
             
         state: &crate::AppState) -> Result<TorStatus, String> {
     let tor_manager = state.tor_manager.lock().await;
-    Ok(tor_manager.get_status())
+    Ok(tor_manager.get_status().await)
 }
 
 
@@ -461,7 +461,7 @@ pub async fn get_tor_exit_nodes(
             
         state: &crate::AppState) -> Result<Vec<TorExitNode>, String> {
     let tor_manager = state.tor_manager.lock().await;
-    Ok(tor_manager.get_exit_nodes())
+    Ok(tor_manager.get_exit_nodes().await)
 }
 
 
@@ -486,5 +486,5 @@ pub async fn refresh_tor_exit_nodes(
         state: &crate::AppState) -> Result<Vec<TorExitNode>, String> {
     let mut tor_manager = state.tor_manager.lock().await;
     tor_manager.refresh_exit_nodes()?;
-    Ok(tor_manager.get_exit_nodes())
+    Ok(tor_manager.get_exit_nodes().await)
 }

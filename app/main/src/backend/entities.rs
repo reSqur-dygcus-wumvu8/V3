@@ -272,7 +272,7 @@ impl EntityManager {
     pub async fn new(db: Arc<Mutex<Database>>) -> Self {
         Self {
             db: Arc::clone(&db),
-            dedup_manager: DeduplicationManager::new(Arc::clone(&db)),
+            dedup_manager: DeduplicationManager::new(Arc::clone(&db)).await,
         }
     }
 

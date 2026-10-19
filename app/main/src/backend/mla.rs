@@ -23,7 +23,7 @@ impl MlaContext {
         // En production, il faudra lier la bibliothèque libmla.so
         
         // Essayer de charger la bibliothèque
-        if let Ok(_) = unsafe { libmla::mla_init() } {
+        if unsafe { libmla::mla_init() } == 0 {
             let ctx = unsafe { libmla::mla_new() };
             if ctx.is_null() {
                 return Err(anyhow::anyhow!("Échec de la création du contexte MLA"));
@@ -243,18 +243,18 @@ impl MlaEncryption {
     pub async fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
         let key = self.current_key.as_ref()
             .ok_or_else(|| anyhow::anyhow!("Aucune clé définie"))?;
-        self.context.encrypt(key, plaintext)
+        self.context.encrypt(key, plaintext).await
     }
     
     /// Déchiffre des données avec la clé actuelle
     pub async fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
         let key = self.current_key.as_ref()
             .ok_or_else(|| anyhow::anyhow!("Aucune clé définie"))?;
-        self.context.decrypt(key, ciphertext)
+        self.context.decrypt(key, ciphertext).await
     }
     
     /// Génère une nouvelle clé
-    pub async fn generate_key() -> Vec<u8> {
+    pub fn generate_key() -> Vec<u8> {
         MlaContext::generate_key()
     }
     

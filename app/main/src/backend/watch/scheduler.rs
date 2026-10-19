@@ -138,7 +138,7 @@ impl WatchScheduler {
                     let translated_results = self.translate_results(results, &watch.language, api_client).await?;
                     
                     // Sauvegarder les résultats dans la base
-                    self.save_results(&translated_results, watch.id.unwrap_or(0)).await?;
+                    self.save_results(translated_results, watch.id.unwrap_or(0)).await?;
                     
                     all_results.extend(translated_results);
                 }
