@@ -24,7 +24,7 @@ pub struct MainSettings {
 
 impl AppSettings {
     /// Charge les paramètres depuis le fichier de configuration
-    pub fn load() -> Result<Self, String> {
+    pub async fn load() -> Result<Self, String> {
         let settings_dir = dirs::config_dir()
             .ok_or("Impossible de trouver le dossier de configuration").map_err(|e| e.to_string())?
             .join("osint_app");
@@ -54,7 +54,7 @@ impl AppSettings {
     }
     
     /// Sauvegarde les paramètres dans le fichier de configuration
-    pub fn save(&self) -> Result<(), String> {
+    pub async fn save(&self) -> Result<(), String> {
         let settings_dir = dirs::config_dir()
             .ok_or("Impossible de trouver le dossier de configuration").map_err(|e| e.to_string())?
             .join("osint_app");
@@ -67,7 +67,7 @@ impl AppSettings {
     }
     
     /// Met à jour les paramètres partagés
-    pub fn update_shared(&mut self, shared: SharedAppSettings) {
+    pub async fn update_shared(&mut self, shared: SharedAppSettings) {
         self.shared = shared;
     }
 }

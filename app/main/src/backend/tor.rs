@@ -53,7 +53,7 @@ pub struct TorStatus {
 
 impl TorManager {
     /// Crée un nouveau TorManager avec les paramètres donnés
-    pub fn new(settings: &crate::backend::settings::TorSettings) -> Result<Self> {
+    pub async fn new(settings: &crate::backend::settings::TorSettings) -> Result<Self> {
         Ok(Self {
             settings: settings.clone(),
             process: None,
@@ -66,7 +66,7 @@ impl TorManager {
     }
     
     /// Démarre le daemon TOR
-    pub fn start_tor(&mut self) -> Result<()> {
+    pub async fn start_tor(&mut self) -> Result<()> {
         if self.process.is_some() {
             return Ok(()); // Déjà démarré
         }
@@ -143,7 +143,7 @@ impl TorManager {
     }
     
     /// Arrête le daemon TOR
-    pub fn stop_tor(&mut self) -> Result<()> {
+    pub async fn stop_tor(&mut self) -> Result<()> {
         if let Some(mut process) = self.process.take() {
             process.kill()?;
             process.wait()?;
@@ -181,7 +181,7 @@ impl TorManager {
     }
     
     /// Rafraîchit la liste des nœuds de sortie TOR
-    pub fn refresh_exit_nodes(&mut self) -> Result<()> {
+    pub async fn refresh_exit_nodes(&mut self) -> Result<()> {
         use std::net::TcpStream;
         use std::io::{Write, BufRead};
         
@@ -315,7 +315,7 @@ impl TorManager {
     }
     
     /// Sélectionne le meilleur nœud de sortie pour une destination donnée
-    pub fn select_exit_node(&self, target_country: Option<&str>) -> Option<TorExitNode> {
+    pub async fn select_exit_node(&self, target_country: Option<&str>) -> Option<TorExitNode> {
         // Si un pays cible est spécifié, essayer de trouver un nœud dans ce pays
         if let Some(country_code) = target_country {
             if let Some(nodes) = self.node_cache.get(country_code) {
@@ -335,7 +335,7 @@ impl TorManager {
     }
     
     /// Crée un client HTTP configuré pour utiliser TOR
-    pub fn create_tor_client(&self) -> Result<Client> {
+    pub async fn create_tor_client(&self) -> Result<Client> {
         let proxy = Proxy::all(format!("socks5://127.0.0.1:{}", self.socks_port))?;
         
         let client = Client::builder()
@@ -377,7 +377,7 @@ impl TorManager {
     }
     
     /// Récupère le statut actuel de TOR
-    pub fn get_status(&self) -> TorStatus {
+    pub async fn get_status(&self) -> TorStatus {
         TorStatus {
             is_running: self.process.is_some(),
             version: None, // À implémenter
@@ -390,12 +390,12 @@ impl TorManager {
     }
     
     /// Récupère la liste des nœuds de sortie
-    pub fn get_exit_nodes(&self) -> Vec<TorExitNode> {
+    pub async fn get_exit_nodes(&self) -> Vec<TorExitNode> {
         self.exit_nodes.clone()
     }
     
     /// Récupère les nœuds de sortie pour un pays spécifique
-    pub fn get_exit_nodes_by_country(&self, country_code: &str) -> Vec<TorExitNode> {
+    pub async fn get_exit_nodes_by_country(&self, country_code: &str) -> Vec<TorExitNode> {
         self.node_cache
             .get(country_code)
             .cloned()
@@ -411,7 +411,7 @@ pub struct TorClient {
 }
 
 impl TorClient {
-    pub fn new(socks_port: u16) -> Result<Self> {
+    pub async fn new(socks_port: u16) -> Result<Self> {
         let proxy = Proxy::all(format!("socks5://127.0.0.1:{}", socks_port))?;
         
         let client = Client::builder()
@@ -430,7 +430,7 @@ impl TorClient {
         self.client.post(url).json(&body).send().await
     }
     
-    pub fn with_exit_node(self, node: &TorExitNode) -> Result<Self> {
+    pub async fn with_exit_node(self, node: &TorExitNode) -> Result<Self> {
         // Pour l'instant, on ne peut pas changer de nœud de sortie dynamiquement
         // sans redémarrer TOR avec une configuration spécifique.
         // Cela nécessiterait une intégration plus poussée avec le contrôleur TOR.

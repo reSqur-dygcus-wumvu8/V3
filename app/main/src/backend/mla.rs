@@ -17,7 +17,7 @@ pub struct MlaContext {
 
 impl MlaContext {
     /// Initialise un nouveau contexte MLA
-    pub fn new() -> Result<Self> {
+    pub async fn new() -> Result<Self> {
         // Charger la bibliothèque MLA
         // Pour l'instant, on va utiliser des stubs car MLA n'est pas encore intégré
         // En production, il faudra lier la bibliothèque libmla.so
@@ -38,7 +38,7 @@ impl MlaContext {
     }
     
     /// Chiffre des données
-    pub fn encrypt(&self, key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>> {
+    pub async fn encrypt(&self, key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>> {
         if self.ctx.is_null() {
             // Mode stub: retourner les données non chiffrées
             log::warn!("Chiffrement MLA en mode stub");
@@ -83,7 +83,7 @@ impl MlaContext {
     }
     
     /// Déchiffre des données
-    pub fn decrypt(&self, key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> {
+    pub async fn decrypt(&self, key: &[u8], ciphertext: &[u8]) -> Result<Vec<u8>> {
         if self.ctx.is_null() {
             // Mode stub: retourner les données non chiffrées
             log::warn!("Déchiffrement MLA en mode stub");
@@ -128,7 +128,7 @@ impl MlaContext {
     }
     
     /// Configure la clé de chiffrement
-    pub fn set_key(&self, key: &[u8]) -> Result<()> {
+    pub async fn set_key(&self, key: &[u8]) -> Result<()> {
         if self.ctx.is_null() {
             return Ok(()); // Mode stub
         }
@@ -149,7 +149,7 @@ impl MlaContext {
     }
     
     /// Génère une clé aléatoire
-    pub fn generate_key() -> Vec<u8> {
+    pub async fn generate_key() -> Vec<u8> {
         use rand::RngCore;
         use rand::rngs::OsRng;
         
@@ -159,7 +159,7 @@ impl MlaContext {
     }
     
     /// Dérive une clé à partir d'une clé maître et d'un contexte
-    pub fn derive_key(&self, master_key: &[u8], context: &[u8]) -> Result<Vec<u8>> {
+    pub async fn derive_key(&self, master_key: &[u8], context: &[u8]) -> Result<Vec<u8>> {
         use hkdf::Hkdf;
         use sha2::Sha256;
         
@@ -225,7 +225,7 @@ pub struct MlaEncryption {
 }
 
 impl MlaEncryption {
-    pub fn new() -> Result<Self> {
+    pub async fn new() -> Result<Self> {
         Ok(Self {
             context: MlaContext::new()?,
             current_key: None,
@@ -233,33 +233,33 @@ impl MlaEncryption {
     }
     
     /// Définit la clé de chiffrement actuelle
-    pub fn set_key(&mut self, key: Vec<u8>) -> Result<()> {
+    pub async fn set_key(&mut self, key: Vec<u8>) -> Result<()> {
         self.context.set_key(&key)?;
         self.current_key = Some(key);
         Ok(())
     }
     
     /// Chiffre des données avec la clé actuelle
-    pub fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
+    pub async fn encrypt(&self, plaintext: &[u8]) -> Result<Vec<u8>> {
         let key = self.current_key.as_ref()
             .ok_or_else(|| anyhow::anyhow!("Aucune clé définie"))?;
         self.context.encrypt(key, plaintext)
     }
     
     /// Déchiffre des données avec la clé actuelle
-    pub fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
+    pub async fn decrypt(&self, ciphertext: &[u8]) -> Result<Vec<u8>> {
         let key = self.current_key.as_ref()
             .ok_or_else(|| anyhow::anyhow!("Aucune clé définie"))?;
         self.context.decrypt(key, ciphertext)
     }
     
     /// Génère une nouvelle clé
-    pub fn generate_key() -> Vec<u8> {
+    pub async fn generate_key() -> Vec<u8> {
         MlaContext::generate_key()
     }
     
     /// Efface la clé actuelle
-    pub fn clear_key(&mut self) {
+    pub async fn clear_key(&mut self) {
         if let Some(mut key) = self.current_key.take() {
             key.zeroize();
         }

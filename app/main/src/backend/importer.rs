@@ -28,7 +28,7 @@ pub struct FileImporter {
 }
 
 impl FileImporter {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 
@@ -116,7 +116,7 @@ impl FileImporter {
         // Générer un nom de fichier unique
         let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
         let sanitized_name = name.replace(|c: char| !c.is_ascii_alphanumeric() && c != '.' && c != '_', "_");
-        let file_path = storage_dir.join(format!("{}_{}_{}", timestamp, sanitized_name));
+        let file_path = storage_dir.join(format!("{}_{}", timestamp, sanitized_name));
 
         // Sauvegarder le fichier
         std::fs::write(&file_path, data).map_err(|e| e.to_string())?;
@@ -220,7 +220,7 @@ impl FileImporter {
     }
 
     /// Vérifie si un fichier existe déjà (pour l'API Tauri)
-    pub fn check_file_duplicate(&self, hash: String) -> Result<bool, String> {
+    pub async fn check_file_duplicate(&self, hash: String) -> Result<bool, String> {
         self.is_duplicate(&hash)
     }
 }

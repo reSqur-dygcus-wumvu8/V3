@@ -1,0 +1,1 @@
+(&str, impl Future<Output = &'static str>, std::string::String, std::option::Option<std::string::String>, std::option::Option<std::string::String>, std::string::String, std::string::String, impl Future<Output = std::string::String>, bool)

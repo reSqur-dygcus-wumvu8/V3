@@ -22,7 +22,7 @@ pub enum IndividualType {
 }
 
 impl IndividualType {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             IndividualType::Real => "réel",
             IndividualType::Fictive => "fictif",
@@ -30,7 +30,7 @@ impl IndividualType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "réel" | "real" | "réelle" => Some(IndividualType::Real),
             "fictif" | "fictive" | "fiction" => Some(IndividualType::Fictive),
@@ -49,7 +49,7 @@ pub enum LocationType {
 }
 
 impl LocationType {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             LocationType::Real => "réel",
             LocationType::Fictive => "fictif",
@@ -57,7 +57,7 @@ impl LocationType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "réel" | "real" | "réelle" => Some(LocationType::Real),
             "fictif" | "fictive" | "fiction" => Some(LocationType::Fictive),
@@ -82,7 +82,7 @@ pub enum OrganizationType {
 }
 
 impl OrganizationType {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             OrganizationType::Gouvernement => "gouvernement",
             OrganizationType::Entreprise => "entreprise",
@@ -96,7 +96,7 @@ impl OrganizationType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "gouvernement" | "government" | "état" | "state" => Some(OrganizationType::Gouvernement),
             "entreprise" | "company" | "société" | "corporation" => Some(OrganizationType::Entreprise),
@@ -123,7 +123,7 @@ pub enum ObjectType {
 }
 
 impl ObjectType {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             ObjectType::Vehicule => "véhicule",
             ObjectType::Arme => "arme",
@@ -134,7 +134,7 @@ impl ObjectType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "véhicule" | "vehicle" | "voiture" | "camion" | "avion" => Some(ObjectType::Vehicule),
             "arme" | "weapon" | "pistolet" | "fusil" | "missile" => Some(ObjectType::Arme),
@@ -269,7 +269,7 @@ pub struct EntityManager {
 }
 
 impl EntityManager {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>) -> Self {
         Self {
             db: Arc::clone(&db),
             dedup_manager: DeduplicationManager::new(Arc::clone(&db)),

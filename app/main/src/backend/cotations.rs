@@ -20,13 +20,13 @@ pub struct OtanCotation {
 
 impl OtanCotation {
     /// Crée une nouvelle cotation
-    pub fn new(reliability: char, credibility: char) -> Result<Self, String> {
+    pub async fn new(reliability: char, credibility: char) -> Result<Self, String> {
         Self::validate(reliability, credibility)?;
         Ok(Self { reliability, credibility })
     }
 
     /// Valide une cotation
-    pub fn validate(reliability: char, credibility: char) -> Result<(), String> {
+    pub async fn validate(reliability: char, credibility: char) -> Result<(), String> {
         if !['A', 'B', 'C', 'D', 'E', 'F'].contains(&reliability) {
             return Err(format!("Code de fiabilité invalide: {}", reliability));
         }
@@ -37,12 +37,12 @@ impl OtanCotation {
     }
 
     /// Retourne la cotation au format "Xy" (ex: "A1", "B2")
-    pub fn to_string(&self) -> String {
+    pub async fn to_string(&self) -> String {
         format!("{}{}", self.reliability, self.credibility)
     }
 
     /// Parse une cotation depuis une chaîne (ex: "A1", "B2")
-    pub fn from_str(cotation: &str) -> Result<Self, String> {
+    pub async fn from_str(cotation: &str) -> Result<Self, String> {
         if cotation.len() != 2 {
             return Err(format!("Format de cotation invalide: {}", cotation));
         }
@@ -55,7 +55,7 @@ impl OtanCotation {
     }
 
     /// Retourne le libellé complet de la cotation
-    pub fn get_label(&self) -> String {
+    pub async fn get_label(&self) -> String {
         let reliability_label = RELIABILITY_CODES.iter()
             .find(|(code, _)| *code == self.reliability.to_string())
             .map(|(_, label)| *label)
@@ -70,7 +70,7 @@ impl OtanCotation {
     }
 
     /// Retourne le score numérique (1-6 pour la fiabilité, 1-6 pour la crédibilité)
-    pub fn get_numeric_scores(&self) -> (u8, u8) {
+    pub async fn get_numeric_scores(&self) -> (u8, u8) {
         let reliability_score = match self.reliability {
             'A' => 1,
             'B' => 2,
@@ -87,7 +87,7 @@ impl OtanCotation {
     }
 
     /// Compare deux cotations
-    pub fn compare(&self, other: &Self) -> std::cmp::Ordering {
+    pub async fn compare(&self, other: &Self) -> std::cmp::Ordering {
         let (self_reliability, self_credibility) = self.get_numeric_scores();
         let (other_reliability, other_credibility) = other.get_numeric_scores();
 
@@ -103,7 +103,7 @@ pub struct CotationManager {
 }
 
 impl CotationManager {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 

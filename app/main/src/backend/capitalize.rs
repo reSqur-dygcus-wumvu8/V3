@@ -45,7 +45,7 @@ pub struct CapitalizationManager {
 }
 
 impl CapitalizationManager {
-    pub fn new(db: Arc<Mutex<Database>>, tor_client: TorClient) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>, tor_client: TorClient) -> Self {
         Self {
             db,
             tor_client,
@@ -53,7 +53,7 @@ impl CapitalizationManager {
         }
     }
 
-    pub fn with_api_client(mut self, api_client: MistralApiClient) -> Self {
+    pub async fn with_api_client(mut self, api_client: MistralApiClient) -> Self {
         self.api_client = Some(api_client);
         self
     }

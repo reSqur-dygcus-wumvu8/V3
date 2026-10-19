@@ -28,7 +28,7 @@ pub enum DetectedEntityType {
 }
 
 impl DetectedEntityType {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             DetectedEntityType::Individual => "individual",
             DetectedEntityType::Organization => "organization",
@@ -43,7 +43,7 @@ impl DetectedEntityType {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "individual" | "person" | "personne" => Some(DetectedEntityType::Individual),
             "organization" | "org" | "organisation" => Some(DetectedEntityType::Organization),
@@ -59,7 +59,7 @@ impl DetectedEntityType {
     }
 
     /// Convertit en EntityType pour la base de connaissance
-    pub fn to_entity_type(&self) -> EntityType {
+    pub async fn to_entity_type(&self) -> EntityType {
         match self {
             DetectedEntityType::Individual => EntityType::Individual,
             DetectedEntityType::Organization => EntityType::Organization,
@@ -98,7 +98,7 @@ pub struct NerManager {
 }
 
 impl NerManager {
-    pub fn new(db: Arc<Mutex<Database>>, api_client: ApiClient) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>, api_client: ApiClient) -> Self {
         Self { db, api_client }
     }
 
@@ -134,7 +134,7 @@ impl NerManager {
             "Tu es un expert en analyse de texte pour la reconnaissance d'entités nominales (NER). \
              Analyse le texte suivant et extrait toutes les entités avec leur type, position et score de confiance. \
              \
-             Texte à analyser (langue: {}): \
+             Texte à analyser (langue: {}) : \
              \"\"\"{}\"\"\" \
              \
              Règle de sortie: \
@@ -165,7 +165,7 @@ impl NerManager {
              - other: Autres entités non classées \
              \
              Consignes: \
-             - La langue du texte est {}. \
+             - La langue du texte est {lang}. \
              - Sois précis sur les positions (start et end sont des indices de caractères). \
              - Le score de confiance doit être entre 0 et 1. \
              - Ne retourne AUCUN autre texte, seulement le JSON.",

@@ -18,7 +18,7 @@ use crate::backend::tor::TorClient;
 pub struct ApiRequestConfig {
     pub url: String,
     pub method: String,
-    pub headers: Option<Vec<(String, String)>,
+    pub headers: Option<Vec<(String, String)>>,
     pub body: Option<String>,
     pub timeout: Option<u64>,
     pub max_retries: Option<usize>,
@@ -59,7 +59,7 @@ pub struct GenericApiClient {
 }
 
 impl GenericApiClient {
-    pub fn new(tor_client: TorClient) -> Self {
+    pub async fn new(tor_client: TorClient) -> Self {
         Self {
             tor_client,
             default_timeout: Duration::from_secs(30),
@@ -335,7 +335,7 @@ pub struct MistralApiClient {
 }
 
 impl MistralApiClient {
-    pub fn new(tor_client: TorClient, api_key: Option<String>) -> Self {
+    pub async fn new(tor_client: TorClient, api_key: Option<String>) -> Self {
         Self {
             api_client: GenericApiClient::new(tor_client),
             api_key,
@@ -425,22 +425,22 @@ pub struct MistralMessage {
 }
 
 impl MistralMessage {
-    pub fn new(role: &str, content: &str) -> Self {
+    pub async fn new(role: &str, content: &str) -> Self {
         Self {
             role: role.to_string(),
             content: content.to_string(),
         }
     }
 
-    pub fn system(content: &str) -> Self {
+    pub async fn system(content: &str) -> Self {
         Self::new("system", content)
     }
 
-    pub fn user(content: &str) -> Self {
+    pub async fn user(content: &str) -> Self {
         Self::new("user", content)
     }
 
-    pub fn assistant(content: &str) -> Self {
+    pub async fn assistant(content: &str) -> Self {
         Self::new("assistant", content)
     }
 }

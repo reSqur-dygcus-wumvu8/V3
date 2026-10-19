@@ -32,7 +32,7 @@ pub struct DiscoveryManager {
 }
 
 impl DiscoveryManager {
-    pub fn new(api_client: ApiClient, db: Arc<Mutex<Database>>) -> Self {
+    pub async fn new(api_client: ApiClient, db: Arc<Mutex<Database>>) -> Self {
         Self { api_client, db }
     }
 
@@ -66,7 +66,7 @@ impl DiscoveryManager {
         
         Ok(format!(
             "Tu es un analyste en renseignement spécialisé dans l'exploration de thématiques complexes. \
-             Explore la thématique suivante en profondeur : \"{}\". \
+             Explore la thématique suivante en profondeur : \"{topic}\". \
              \
              Réponds UNIQUEMENT avec un JSON structuré comme suit : \
              {{

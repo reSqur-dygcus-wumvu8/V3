@@ -18,7 +18,7 @@ pub struct GoogleNewsScraper {
 }
 
 impl GoogleNewsScraper {
-    pub fn new(tor_client: TorClient) -> Self {
+    pub async fn new(tor_client: TorClient) -> Self {
         let client = tor_client.client.clone();
         Self { client, tor_client }
     }
@@ -112,7 +112,7 @@ pub struct QwantScraper {
 }
 
 impl QwantScraper {
-    pub fn new(tor_client: TorClient) -> Self {
+    pub async fn new(tor_client: TorClient) -> Self {
         let client = tor_client.client.clone();
         Self { client, tor_client }
     }
@@ -210,7 +210,7 @@ pub struct YandexScraper {
 }
 
 impl YandexScraper {
-    pub fn new(tor_client: TorClient) -> Self {
+    pub async fn new(tor_client: TorClient) -> Self {
         let client = tor_client.client.clone();
         Self { client, tor_client }
     }
@@ -314,7 +314,7 @@ pub struct TwitterScraper {
 }
 
 impl TwitterScraper {
-    pub fn new(tor_client: TorClient, api_key: Option<String>) -> Self {
+    pub async fn new(tor_client: TorClient, api_key: Option<String>) -> Self {
         let client = tor_client.client.clone();
         Self { client, tor_client, api_key }
     }
@@ -410,7 +410,7 @@ pub struct TelegramScraper {
 }
 
 impl TelegramScraper {
-    pub fn new(tor_client: TorClient) -> Self {
+    pub async fn new(tor_client: TorClient) -> Self {
         let client = tor_client.client.clone();
         Self { client, tor_client }
     }
@@ -448,7 +448,7 @@ pub struct GenericWebScraper {
 }
 
 impl GenericWebScraper {
-    pub fn new(tor_client: TorClient) -> Self {
+    pub async fn new(tor_client: TorClient) -> Self {
         let client = tor_client.client.clone();
         Self { client, tor_client }
     }
@@ -506,7 +506,7 @@ pub struct ScraperFactory {
 }
 
 impl ScraperFactory {
-    pub fn new(tor_client: TorClient, mistral_api_key: Option<String>) -> Self {
+    pub async fn new(tor_client: TorClient, mistral_api_key: Option<String>) -> Self {
         Self {
             tor_client,
             mistral_api_key,
@@ -514,7 +514,7 @@ impl ScraperFactory {
     }
 
     /// Crée un scraper en fonction de la source
-    pub fn create_scraper(&self, source: &str) -> Box<dyn Scraper> {
+    pub async fn create_scraper(&self, source: &str) -> Box<dyn Scraper> {
         match source {
             "google_news" => Box::new(GoogleNewsScraper::new(self.tor_client.clone())),
             "qwant" => Box::new(QwantScraper::new(self.tor_client.clone())),
@@ -529,35 +529,35 @@ impl ScraperFactory {
 /// Trait pour les scrapers
 pub trait Scraper {
     /// Scrape une requête et retourne les résultats
-    fn scrape(&self, query: &str, language: &str) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send>;
+    fn scrape(&self, query: String, language: String) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send + 'static>;
 }
 
 impl Scraper for GoogleNewsScraper {
-    fn scrape(&self, query: &str, language: &str) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send> {
+    fn scrape(&self, query: String, language: String) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send + 'static> {
         Box::new(self.scrape(query, language))
     }
 }
 
 impl Scraper for QwantScraper {
-    fn scrape(&self, query: &str, language: &str) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send> {
+    fn scrape(&self, query: String, language: String) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send + 'static> {
         Box::new(self.scrape(query, language))
     }
 }
 
 impl Scraper for YandexScraper {
-    fn scrape(&self, query: &str, language: &str) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send> {
+    fn scrape(&self, query: String, language: String) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send + 'static> {
         Box::new(self.scrape(query, language))
     }
 }
 
 impl Scraper for TwitterScraper {
-    fn scrape(&self, query: &str, language: &str) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send> {
+    fn scrape(&self, query: String, language: String) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send + 'static> {
         Box::new(self.scrape(query, language))
     }
 }
 
 impl Scraper for TelegramScraper {
-    fn scrape(&self, query: &str, language: &str) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send> {
+    fn scrape(&self, query: String, language: String) -> Box<dyn std::future::Future<Output = Result<Vec<WatchResult>, String>> + Send + 'static> {
         Box::new(self.scrape(query, language))
     }
 }

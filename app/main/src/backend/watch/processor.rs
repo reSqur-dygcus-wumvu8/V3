@@ -18,7 +18,7 @@ pub struct WatchProcessor {
 }
 
 impl WatchProcessor {
-    pub fn new(
+    pub async fn new(
         db: Arc<Mutex<Database>>,
         api_client: ApiClient,
         watch_manager: Arc<Mutex<WatchManager>>,
@@ -204,7 +204,7 @@ impl WatchProcessor {
     }
 
     /// Regroupe les résultats par événements
-    pub fn group_by_event(results: Vec<ProcessedWatchResult>) -> Vec<EventGroup> {
+    pub async fn group_by_event(results: Vec<ProcessedWatchResult>) -> Vec<EventGroup> {
         use std::collections::HashMap;
 
         let mut groups: HashMap<String, EventGroup> = HashMap::new();

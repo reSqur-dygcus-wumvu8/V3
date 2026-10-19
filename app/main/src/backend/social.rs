@@ -24,7 +24,7 @@ pub enum SocialPlatform {
 }
 
 impl SocialPlatform {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             SocialPlatform::Twitter => "twitter",
             SocialPlatform::Discord => "discord",
@@ -34,7 +34,7 @@ impl SocialPlatform {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s.to_lowercase().as_str() {
             "twitter" | "twitter/x" | "x" => Some(SocialPlatform::Twitter),
             "discord" => Some(SocialPlatform::Discord),
@@ -91,7 +91,7 @@ pub struct SocialMediaManager {
 }
 
 impl SocialMediaManager {
-    pub fn new(db: Arc<Mutex<Database>>, tor_client: TorClient) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>, tor_client: TorClient) -> Self {
         Self {
             db,
             tor_client,
@@ -99,7 +99,7 @@ impl SocialMediaManager {
         }
     }
 
-    pub fn with_api_client(mut self, api_client: ApiClient) -> Self {
+    pub async fn with_api_client(mut self, api_client: ApiClient) -> Self {
         self.api_client = Some(api_client);
         self
     }
@@ -328,7 +328,7 @@ impl SocialMediaManager {
     }
 
     /// Convertit les résultats sociaux en WatchResult pour la capitalisation
-    pub fn convert_to_watch_results(
+    pub async fn convert_to_watch_results(
         &self,
         results: Vec<SocialSearchResult>,
         watch_id: i64,

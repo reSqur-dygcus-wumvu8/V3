@@ -26,7 +26,7 @@ pub struct Database {
 
 impl Database {
     /// Crée une nouvelle connexion à la base de données
-    pub fn new(settings: &AppSettings) -> Result<Self> {
+    pub async fn new(settings: &AppSettings) -> Result<Self> {
         // Déterminer le chemin de la base
         let db_path = settings.maps.cache_directory
             .clone()
@@ -443,7 +443,7 @@ impl Database {
     }
     
     /// Exécute une requête et retourne les résultats
-    pub fn query<T, F>(&self, sql: &str, params: T, mut callback: F) -> SqliteResult<()>
+    pub async fn query<T, F>(&self, sql: &str, params: T, mut callback: F) -> SqliteResult<()>
     where
         T: rusqlite::Params,
         F: FnMut(&rusqlite::Row) -> rusqlite::Result<()>
@@ -453,7 +453,7 @@ impl Database {
     }
     
     /// Récupère une entité par son ID et son type
-    pub fn get_entity(&self, entity_type: &str, id: i64) -> Result<Option<serde_json::Value>> {
+    pub async fn get_entity(&self, entity_type: &str, id: i64) -> Result<Option<serde_json::Value>> {
         let table = match entity_type {
             "individual" => "individuals",
             "organization" => "organizations",
@@ -520,7 +520,7 @@ impl Database {
     }
     
     /// Ajoute une entité
-    pub fn add_entity(&self, entity_type: &str, data: &serde_json::Map<String, serde_json::Value>) -> Result<i64> {
+    pub async fn add_entity(&self, entity_type: &str, data: &serde_json::Map<String, serde_json::Value>) -> Result<i64> {
         let table = match entity_type {
             "individual" => "individuals",
             "organization" => "organizations",
@@ -592,7 +592,7 @@ impl Database {
     }
     
     /// Met à jour une entité
-    pub fn update_entity(&self, entity_type: &str, id: i64, data: &serde_json::Map<String, serde_json::Value>) -> Result<()> {
+    pub async fn update_entity(&self, entity_type: &str, id: i64, data: &serde_json::Map<String, serde_json::Value>) -> Result<()> {
         let table = match entity_type {
             "individual" => "individuals",
             "organization" => "organizations",
@@ -661,7 +661,7 @@ impl Database {
     }
     
     /// Supprime une entité
-    pub fn delete_entity(&self, entity_type: &str, id: i64) -> Result<()> {
+    pub async fn delete_entity(&self, entity_type: &str, id: i64) -> Result<()> {
         let table = match entity_type {
             "individual" => "individuals",
             "organization" => "organizations",
@@ -679,7 +679,7 @@ impl Database {
     }
     
     /// Récupère toutes les veilles actives
-    pub fn get_active_watches(&self) -> Result<Vec<serde_json::Value>> {
+    pub async fn get_active_watches(&self) -> Result<Vec<serde_json::Value>> {
         let mut stmt = self.conn.prepare(
             "SELECT * FROM watches WHERE is_active = 1"
         )?;
@@ -721,7 +721,7 @@ impl Database {
     }
     
     /// Sauvegarde un résultat de veille
-    pub fn save_watch_result(&self, watch_id: i64, result: &serde_json::Map<String, serde_json::Value>) -> Result<i64> {
+    pub async fn save_watch_result(&self, watch_id: i64, result: &serde_json::Map<String, serde_json::Value>) -> Result<i64> {
         let mut stmt = self.conn.prepare(
             "INSERT INTO watch_results (watch_id, title, url, content, translated_content, source_name, published_at, fetched_at, is_processed, metadata) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
@@ -744,7 +744,7 @@ impl Database {
     }
     
     /// Récupère les résultats de veille non traités
-    pub fn get_unprocessed_watch_results(&self) -> Result<Vec<serde_json::Value>> {
+    pub async fn get_unprocessed_watch_results(&self) -> Result<Vec<serde_json::Value>> {
         let mut stmt = self.conn.prepare(
             "SELECT * FROM watch_results WHERE is_processed = 0"
         )?;
@@ -786,7 +786,7 @@ impl Database {
     }
     
     /// Marque un résultat de veille comme traité
-    pub fn mark_watch_result_processed(&self, result_id: i64) -> Result<()> {
+    pub async fn mark_watch_result_processed(&self, result_id: i64) -> Result<()> {
         self.conn.execute(
             "UPDATE watch_results SET is_processed = 1 WHERE id = ?",
             [result_id]
@@ -795,7 +795,7 @@ impl Database {
     }
     
     /// Sauvegarde les données ACLED en cache
-    pub fn cache_acled_data(&self, events: &[serde_json::Value]) -> Result<()> {
+    pub async fn cache_acled_data(&self, events: &[serde_json::Value]) -> Result<()> {
         let tx = self.conn.transaction()?;
         
         for event in events {
@@ -837,7 +837,7 @@ impl Database {
     }
     
     /// Récupère les données ACLED en cache
-    pub fn get_cached_acled_data(&self) -> Result<Vec<serde_json::Value>> {
+    pub async fn get_cached_acled_data(&self) -> Result<Vec<serde_json::Value>> {
         let mut stmt = self.conn.prepare("SELECT * FROM acl_cache")?;
         
         let mut events = Vec::new();
@@ -877,7 +877,7 @@ impl Database {
     }
     
     /// Récupère la dernière date de mise à jour du cache ACLED
-    pub fn get_last_acled_update(&self) -> Result<DateTime<Utc>> {
+    pub async fn get_last_acled_update(&self) -> Result<DateTime<Utc>> {
         let mut stmt = self.conn.prepare("SELECT MAX(fetched_at) FROM acl_cache")?;
         
         let mut rows = stmt.query([])?;

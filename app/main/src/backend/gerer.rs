@@ -45,7 +45,7 @@ pub enum DuplicateReviewStatus {
 }
 
 impl DuplicateReviewStatus {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             DuplicateReviewStatus::Pending => "en_attente",
             DuplicateReviewStatus::Reviewed => "revue",
@@ -54,7 +54,7 @@ impl DuplicateReviewStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s {
             "en_attente" | "pending" => Some(DuplicateReviewStatus::Pending),
             "revue" | "reviewed" => Some(DuplicateReviewStatus::Reviewed),
@@ -74,7 +74,7 @@ pub enum DuplicateAction {
 }
 
 impl DuplicateAction {
-    pub fn as_str(&self) -> &'static str {
+    pub async fn as_str(&self) -> &'static str {
         match self {
             DuplicateAction::Merge => "fusionner",
             DuplicateAction::Ignore => "ignorer",
@@ -82,7 +82,7 @@ impl DuplicateAction {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub async fn from_str(s: &str) -> Option<Self> {
         match s {
             "fusionner" | "merge" => Some(DuplicateAction::Merge),
             "ignorer" | "ignore" => Some(DuplicateAction::Ignore),
@@ -109,7 +109,7 @@ pub struct GererManager {
 }
 
 impl GererManager {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 
@@ -199,7 +199,7 @@ impl GererManager {
         let query = format!(
             "SELECT id, entity_type, entity_id, entity_name, duplicate_entity_type, duplicate_entity_id, duplicate_entity_name, similarity_score, strategy, status, created_at, reviewed_by, reviewed_at, action 
              FROM duplicate_review_queue 
-             WHERE 1=1{}{} 
+             WHERE 1=1{} 
              ORDER BY created_at DESC{}",
             status_filter, limit_clause
         );

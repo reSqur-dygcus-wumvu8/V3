@@ -53,7 +53,7 @@ pub struct DeduplicationManager {
 }
 
 impl DeduplicationManager {
-    pub fn new(db: Arc<Mutex<Database>>) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>) -> Self {
         Self { db }
     }
 

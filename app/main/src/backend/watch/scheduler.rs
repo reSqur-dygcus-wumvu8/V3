@@ -24,7 +24,7 @@ pub struct WatchScheduler {
 
 impl WatchScheduler {
     /// Crée un nouveau planificateur
-    pub fn new(db: Arc<Mutex<Database>>, tor_client: Arc<Mutex<TorClient>>) -> Self {
+    pub async fn new(db: Arc<Mutex<Database>>, tor_client: Arc<Mutex<TorClient>>) -> Self {
         Self {
             db,
             tor_client,
@@ -36,7 +36,7 @@ impl WatchScheduler {
     }
 
     /// Initialise le planificateur avec les dépendances nécessaires
-    pub fn with_dependencies(
+    pub async fn with_dependencies(
         mut self,
         api_client: ApiClient,
         scraper_factory: ScraperFactory,
@@ -83,7 +83,7 @@ impl WatchScheduler {
     }
 
     /// Arrête le planificateur
-    pub fn stop(&mut self) {
+    pub async fn stop(&mut self) {
         self.is_running = false;
         info!("Arrêt du planificateur de veilles");
     }

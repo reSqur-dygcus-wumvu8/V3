@@ -90,7 +90,7 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
-    pub fn new(tor_client: TorClient, mistral_api_key: Option<String>) -> Self {
+    pub async fn new(tor_client: TorClient, mistral_api_key: Option<String>) -> Self {
         Self {
             tor_client,
             mistral_api_key,
@@ -242,7 +242,7 @@ pub struct WatchManager {
 }
 
 impl WatchManager {
-    pub fn new(
+    pub async fn new(
         db: Arc<Mutex<Database>>,
         tor_client: TorClient,
         api_client: ApiClient,
@@ -255,7 +255,7 @@ impl WatchManager {
     }
 
     /// Récupère toutes les veilles
-    pub fn get_watches(&self) -> Result<Vec<Watch>, String> {
+    pub async fn get_watches(&self) -> Result<Vec<Watch>, String> {
         let db = self.db.lock().await;
         let mut stmt = db.conn.prepare(
             "SELECT id, name, query, language, sources, frequency_minutes, is_active, created_at, updated_at 
@@ -286,7 +286,7 @@ impl WatchManager {
     }
 
     /// Ajoute une nouvelle veille
-    pub fn add_watch(&self, watch: Watch) -> Result<i64, String> {
+    pub async fn add_watch(&self, watch: Watch) -> Result<i64, String> {
         let db = self.db.lock().await;
         let sources_json = serde_json::to_string(&watch.sources).unwrap_or_default();
         let now = chrono::Utc::now().to_rfc3339();
@@ -310,7 +310,7 @@ impl WatchManager {
     }
 
     /// Met à jour une veille
-    pub fn update_watch(&self, watch: Watch) -> Result<(), String> {
+    pub async fn update_watch(&self, watch: Watch) -> Result<(), String> {
         let db = self.db.lock().await;
         let sources_json = serde_json::to_string(&watch.sources).unwrap_or_default();
         let now = chrono::Utc::now().to_rfc3339();
@@ -337,7 +337,7 @@ impl WatchManager {
     }
 
     /// Supprime une veille
-    pub fn delete_watch(&self, id: i64) -> Result<(), String> {
+    pub async fn delete_watch(&self, id: i64) -> Result<(), String> {
         let db = self.db.lock().await;
         db.conn.execute(
             "DELETE FROM watches WHERE id = ?",
@@ -348,7 +348,7 @@ impl WatchManager {
     }
 
     /// Récupère les résultats d'une veille
-    pub fn get_watch_results(&self, watch_id: i64) -> Result<Vec<WatchResult>, String> {
+    pub async fn get_watch_results(&self, watch_id: i64) -> Result<Vec<WatchResult>, String> {
         let db = self.db.lock().await;
         let mut stmt = db.conn.prepare(
             "SELECT id, watch_id, title, url, content, translated_content, source_name, published_at, fetched_at, is_processed, metadata 
@@ -382,7 +382,7 @@ impl WatchManager {
     }
 
     /// Sauvegarde un résultat de veille
-    pub fn save_watch_result(&self, result: WatchResult) -> Result<i64, String> {
+    pub async fn save_watch_result(&self, result: WatchResult) -> Result<i64, String> {
         let db = self.db.lock().await;
         let metadata_json = result.metadata.map(|m| serde_json::to_string(&m).unwrap_or_default())
             .unwrap_or_default();
@@ -409,7 +409,7 @@ impl WatchManager {
     }
 
     /// Marque un résultat comme traité
-    pub fn mark_result_processed(&self, result_id: i64) -> Result<(), String> {
+    pub async fn mark_result_processed(&self, result_id: i64) -> Result<(), String> {
         let db = self.db.lock().await;
         db.conn.execute(
             "UPDATE watch_results SET is_processed = 1 WHERE id = ?",
