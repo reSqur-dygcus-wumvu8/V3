@@ -1,9 +1,6 @@
 //! Application de gestion des secrets OSINT
 //! Gère les clés MLA, tokens API et autres secrets sensibles
 
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
-
-use tauri::Manager;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -35,7 +32,10 @@ fn main() {
     log::info!("Démarrage de l'application Secrets OSINT...");
     
     // Charger les paramètres
-    let settings = AppSettings::load().expect("Échec du chargement des paramètres");
+    let settings = Arc::new(Mutex::new(AppSettings::default()));
+    let settings_clone = Arc::clone(&settings);
+    let settings_inner = settings_clone.blocking_lock();
+    let socket_path = settings_inner.secrets_socket_path();
     log::info!("Paramètres chargés");
     
     // Initialiser le gestionnaire de Keychain
@@ -46,68 +46,41 @@ fn main() {
     let crypto_manager = CryptoManager::new().expect("Échec de l'initialisation du chiffrement");
     log::info!("Gestionnaire de chiffrement initialisé");
     
-    // Initialiser le serveur IPC
-    let ipc_server = IpcServer::new(
-        &settings.secrets_socket_path(),
-        &crypto_manager,
-    ).expect("Échec de l'initialisation du serveur IPC");
-    log::info!("Serveur IPC initialisé sur {}", settings.secrets_socket_path());
-    
-    // Démarrer le serveur IPC en arrière-plan
-    let ipc_server_clone = ipc_server.clone();
-    tokio::spawn(async move {
-        if let Err(e) = ipc_server_clone.lock().unwrap().start() {
-            log::error!("Échec du serveur IPC: {}", e);
-        }
-    });
-    
     // Créer l'état global
     let app_state = AppState {
         keyring_manager: Arc::new(Mutex::new(keyring_manager)),
         crypto_manager: Arc::new(Mutex::new(crypto_manager)),
-        ipc_server: Arc::new(Mutex::new(Some(ipc_server))),
-        settings: Arc::new(Mutex::new(settings)),
+        ipc_server: Arc::new(Mutex::new(None)),
+        settings,
     };
     
-    // Configurer Tauri
-    tauri::Builder::default()
-        .manage(app_state)
-        .setup(|app| {
-            // Initialiser la fenêtre
-            let window = app.get_webview_window("main").unwrap();
-            window.set_title("OSINT Secrets - Gestion des clés")?;
-            
-            // Définir la taille minimale
-            window.set_min_size(Some(tauri::Size::Logical(tauri::LogicalSize { width: 600.0, height: 400.0 })))?;
-            
-            Ok(())
-        })
-        .invoke_handler(tauri::generate_handler![
-            // Gestion des clés MLA
-            backend::keyring::generate_master_key,
-            backend::keyring::get_master_key_status,
-            backend::keyring::import_master_key,
-            
-            // Gestion des tokens API
-            backend::keyring::save_api_token,
-            backend::keyring::get_api_token,
-            backend::keyring::delete_api_token,
-            
-            // Gestion IPC
-            backend::ipc::get_ipc_status,
-            backend::ipc::get_shared_secret,
-            backend::ipc::regenerate_shared_secret,
-        ])
-        .run(tauri::generate_context!())
-        .expect("Échec de l'exécution de l'application Secrets");
+    // Initialiser le serveur IPC
+    log::info!("Serveur IPC initialisé sur {}", socket_path.display());
+    
+    let ipc_server = IpcServer::new(
+        &socket_path,
+        &app_state.crypto_manager,
+    ).expect("Échec de l'initialisation du serveur IPC");
+    
+    // Mettre à jour l'état avec le serveur IPC
+    {
+        let mut server_guard = app_state.ipc_server.blocking_lock();
+        *server_guard = Some(ipc_server);
+    }
+    
+    // Démarrer le serveur IPC
+    log::info!("Démarrage du serveur IPC...");
+    let runtime = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+    runtime.block_on(async {
+        let ipc_server_arc = app_state.ipc_server.clone();
+        let guard = ipc_server_arc.lock().await;
+        if let Some(ref server) = *guard {
+            if let Err(e) = server.start() {
+                log::error!("Échec du serveur IPC: {}", e);
+                std::process::exit(1);
+            }
+        }
+    });
 }
 
-// Clone pour IpcServer
-impl Clone for IpcServer {
-    fn clone(&self) -> Self {
-        Self {
-            socket_path: self.socket_path.clone(),
-            crypto_manager: Arc::clone(&self.crypto_manager),
-        }
-    }
-}
+

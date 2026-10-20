@@ -38,7 +38,7 @@ impl KeyringManager {
     /// Sauvegarde la clé maître dans le Keychain
     pub fn save_master_key(&self, key: &[u8]) -> Result<()> {
         let entry = Entry::new(&self.service_name, "master_key")?;
-        entry.set_password(&base64::encode(key))?;
+        entry.set_password(&base64::Engine::encode(&base64::engine::general_purpose::STANDARD, key))?;
         Ok(())
     }
     
@@ -46,13 +46,13 @@ impl KeyringManager {
     pub fn get_master_key(&self) -> Result<Vec<u8>> {
         let entry = Entry::new(&self.service_name, "master_key")?;
         let password = entry.get_password()?;
-        base64::decode(password).context("Échec du décodage de la clé maître")
+        base64::Engine::decode(&base64::engine::general_purpose::STANDARD, &password).context("Échec du décodage de la clé maître")
     }
     
     /// Supprime la clé maître du Keychain
     pub fn delete_master_key(&self) -> Result<()> {
         let entry = Entry::new(&self.service_name, "master_key")?;
-        entry.delete_credential()?;
+        entry.delete_password()?;
         Ok(())
     }
     
@@ -82,7 +82,7 @@ impl KeyringManager {
     /// Supprime un token API
     pub fn delete_api_token(&self, service: &str) -> Result<()> {
         let entry = Entry::new(&self.service_name, &format!("api_token_{}", service))?;
-        entry.delete_credential()?;
+        entry.delete_password()?;
         Ok(())
     }
     
@@ -104,66 +104,72 @@ impl KeyringManager {
     
     /// Importe une clé maître depuis une chaîne base64
     pub fn import_master_key(&self, base64_key: &str) -> Result<()> {
-        let key = base64::decode(base64_key)?;
+        let key = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, base64_key)?;
         self.save_master_key(&key)
     }
     
     /// Exporte la clé maître en base64
     pub fn export_master_key(&self) -> Result<String> {
         let key = self.get_master_key()?;
-        Ok(base64::encode(key))
+        Ok(base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &key))
     }
 }
 
-/// Commandes Tauri pour la gestion des clés
+/// Commandes pour la gestion des clés (mode CLI)
 
-#[tauri::command]
-pub fn generate_master_key(state: tauri::State<crate::AppState>) -> Result<String, String> {
-    let keyring_manager = state.keyring_manager.lock().unwrap();
+pub fn generate_master_key(state: &crate::AppState) -> Result<String, String> {
+    let keyring_manager = tokio::runtime::Handle::current().block_on(async {
+        state.keyring_manager.lock().await
+    });
     let key = keyring_manager.generate_master_key()
         .map_err(|e| e.to_string())?;
-    Ok(base64::encode(key))
+    Ok(base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &key))
 }
 
-#[tauri::command]
-pub fn get_master_key_status(state: tauri::State<crate::AppState>) -> Result<bool, String> {
-    let keyring_manager = state.keyring_manager.lock().unwrap();
+pub fn get_master_key_status(state: &crate::AppState) -> Result<bool, String> {
+    let keyring_manager = tokio::runtime::Handle::current().block_on(async {
+        state.keyring_manager.lock().await
+    });
     keyring_manager.has_master_key().map_err(|e| e.to_string())
 }
 
-#[tauri::command]
 pub fn import_master_key(
-    state: tauri::State<crate::AppState>,
+    state: &crate::AppState,
     base64_key: String,
 ) -> Result<(), String> {
-    let keyring_manager = state.keyring_manager.lock().unwrap();
+    let keyring_manager = tokio::runtime::Handle::current().block_on(async {
+        state.keyring_manager.lock().await
+    });
     keyring_manager.import_master_key(&base64_key).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
 pub fn save_api_token(
-    state: tauri::State<crate::AppState>,
+    state: &crate::AppState,
     service: String,
     token: String,
 ) -> Result<(), String> {
-    let keyring_manager = state.keyring_manager.lock().unwrap();
+    let keyring_manager = tokio::runtime::Handle::current().block_on(async {
+        state.keyring_manager.lock().await
+    });
     keyring_manager.save_api_token(&service, &token).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
 pub fn get_api_token(
-    state: tauri::State<crate::AppState>,
+    state: &crate::AppState,
     service: String,
 ) -> Result<Option<String>, String> {
-    let keyring_manager = state.keyring_manager.lock().unwrap();
+    let keyring_manager = tokio::runtime::Handle::current().block_on(async {
+        state.keyring_manager.lock().await
+    });
     keyring_manager.get_api_token(&service).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
 pub fn delete_api_token(
-    state: tauri::State<crate::AppState>,
+    state: &crate::AppState,
     service: String,
 ) -> Result<(), String> {
-    let keyring_manager = state.keyring_manager.lock().unwrap();
+    let keyring_manager = tokio::runtime::Handle::current().block_on(async {
+        state.keyring_manager.lock().await
+    });
     keyring_manager.delete_api_token(&service).map_err(|e| e.to_string())
 }

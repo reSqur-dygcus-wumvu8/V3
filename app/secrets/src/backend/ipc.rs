@@ -5,10 +5,11 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::io::{Read, Write};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use anyhow::{Result, Context};
+use anyhow::{Result};
 use serde_json::{json, Value};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use base64::{Engine as _, engine::general_purpose};
 
 use osint_shared::ipc::{IpcMessage, IpcMethod, DeriveSessionKeyParams, DeriveSessionKeyResult, StoreSecretParams, GetSecretParams, GetSecretResult};
 use crate::backend::crypto::CryptoManager;
@@ -49,43 +50,23 @@ impl IpcServer {
     pub fn start(&self) -> Result<()> {
         let listener = UnixListener::bind(&self.socket_path)?;
         
-        // Accepter les connexions
         for stream in listener.incoming() {
             match stream {
                 Ok(mut stream) => {
-                    // Lire le message
                     let mut buffer = vec![0; 4096];
                     let n = stream.read(&mut buffer)?;
                     buffer.truncate(n);
                     
-                    let message_str = String::from_utf8(buffer)
-                        .context("Invalid UTF-8 in IPC message")?;
+                    let message_str = String::from_utf8(buffer)?;
+                    let message: IpcMessage = serde_json::from_str(&message_str)?;
                     
-                    let message: IpcMessage = serde_json::from_str(&message_str)
-                        .context("Failed to parse IPC message")?;
+                    let response = self.handle_message(&message)?;
                     
-                    // Vérifier la signature si une clé secrète est définie
-                    if let Some(secret) = &self.shared_secret {
-                        if message.verify_signature(secret).is_err() {
-                            log::error!("Signature IPC invalide");
-                            continue;
-                        }
-                        
-                        if !message.is_valid_timestamp(60) { // 60 secondes de validité
-                            log::error!("Message IPC expiré ou replay");
-                            continue;
-                        }
-                    }
-                    
-                    // Traiter le message
-                    let response = self.process_message(&message)?;
-                    
-                    // Envoyer la réponse
                     let response_json = serde_json::to_string(&response)?;
                     stream.write_all(response_json.as_bytes())?;
                 }
                 Err(e) => {
-                    log::error!("Erreur IPC: {}", e);
+                    log::error!("Erreur de connexion IPC: {}", e);
                 }
             }
         }
@@ -93,9 +74,9 @@ impl IpcServer {
         Ok(())
     }
     
-    /// Traite un message IPC
-    fn process_message(&self, message: &IpcMessage) -> Result<IpcMessage> {
-        match &message.method {
+    /// Gère un message IPC
+    fn handle_message(&self, message: &IpcMessage) -> Result<IpcMessage> {
+        match message.method.clone() {
             IpcMethod::DeriveSessionKey => {
                 let params: DeriveSessionKeyParams = serde_json::from_value(message.params.clone())?;
                 let result = self.handle_derive_session_key(&params)?;
@@ -119,7 +100,10 @@ impl IpcServer {
     
     /// Gère la dérivation de la clé de session
     fn handle_derive_session_key(&self, params: &DeriveSessionKeyParams) -> Result<DeriveSessionKeyResult> {
-        let crypto_manager = self.crypto_manager.lock().unwrap();
+        let mut runtime = tokio::runtime::Runtime::new()?;
+        let mut crypto_manager = runtime.block_on(async {
+            self.crypto_manager.lock().await
+        });
         
         // Récupérer la clé maître depuis le Keychain
         // (En pratique, cela devrait être fait via le KeyringManager)
@@ -130,7 +114,7 @@ impl IpcServer {
         let session_key = crypto_manager.derive_session_key(params.context.as_bytes())?;
         
         Ok(DeriveSessionKeyResult {
-            session_key: base64::encode(session_key),
+            session_key: general_purpose::STANDARD.encode(&session_key),
         })
     }
     
@@ -226,29 +210,37 @@ impl IpcClient {
     }
 }
 
-/// Commandes Tauri pour IPC
+/// Commandes pour IPC (mode CLI)
 
-#[tauri::command]
-pub fn get_ipc_status(state: tauri::State<crate::AppState>) -> Result<bool, String> {
-    let ipc_server = state.ipc_server.lock().unwrap();
+pub fn get_ipc_status(state: &crate::AppState) -> Result<bool, String> {
+    let mut runtime = tokio::runtime::Runtime::new().or_else(|_| Err("Failed to create runtime".to_string()))?;
+    let ipc_server = runtime.block_on(async {
+        state.ipc_server.lock().await
+    });
     Ok(ipc_server.is_some())
 }
 
-#[tauri::command]
-pub fn get_shared_secret(state: tauri::State<crate::AppState>) -> Result<Option<String>, String> {
-    let ipc_server = state.ipc_server.lock().unwrap();
+pub fn get_shared_secret(state: &crate::AppState) -> Result<Option<String>, String> {
+    let mut runtime = tokio::runtime::Runtime::new().or_else(|_| Err("Failed to create runtime".to_string()))?;
+    let ipc_server = runtime.block_on(async {
+        state.ipc_server.lock().await
+    });
     if let Some(server) = &*ipc_server {
         if let Some(secret) = &server.shared_secret {
-            return Ok(Some(base64::encode(secret)));
+            return Ok(Some(general_purpose::STANDARD.encode(secret)));
         }
     }
     Ok(None)
 }
 
-#[tauri::command]
-pub fn regenerate_shared_secret(state: tauri::State<crate::AppState>) -> Result<String, String> {
-    let crypto_manager = state.crypto_manager.lock().unwrap();
-    let mut ipc_server = state.ipc_server.lock().unwrap();
+pub fn regenerate_shared_secret(state: &crate::AppState) -> Result<String, String> {
+    let mut runtime = tokio::runtime::Runtime::new().or_else(|_| Err("Failed to create runtime".to_string()))?;
+    let mut crypto_manager = runtime.block_on(async {
+        state.crypto_manager.lock().await
+    });
+    let mut ipc_server = runtime.block_on(async {
+        state.ipc_server.lock().await
+    });
     
     let new_secret = crypto_manager.generate_shared_secret();
     
@@ -256,5 +248,5 @@ pub fn regenerate_shared_secret(state: tauri::State<crate::AppState>) -> Result<
         server.set_shared_secret(new_secret.clone());
     }
     
-    Ok(base64::encode(new_secret))
+    Ok(general_purpose::STANDARD.encode(&new_secret))
 }

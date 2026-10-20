@@ -1,13 +1,14 @@
 //! Module de chiffrement pour les secrets
 
 use aes_gcm::{
-    aead::{Aead, KeyInit, OsRng},
+    aead::{Aead, KeyInit},
     Aes256Gcm, Nonce
 };
+use rand::{RngCore, rngs::OsRng};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use anyhow::{Result, Context};
-use zeroize::Zeroize;
+use anyhow::{Result};
+use zeroize::Zeroizing;
 
 /// Taille de la clé (256 bits)
 const KEY_SIZE: usize = 32;
@@ -17,7 +18,7 @@ const NONCE_SIZE: usize = 12;
 
 /// Gestionnaire de chiffrement
 pub struct CryptoManager {
-    master_key: Option<Vec<u8>>,
+    master_key: Option<Zeroizing<Vec<u8>>>,
 }
 
 impl CryptoManager {
@@ -36,7 +37,7 @@ impl CryptoManager {
                 KEY_SIZE
             ));
         }
-        self.master_key = Some(key);
+        self.master_key = Some(Zeroizing::new(key));
         Ok(())
     }
     
@@ -44,7 +45,7 @@ impl CryptoManager {
     pub fn generate_master_key(&mut self) -> Vec<u8> {
         let mut key = vec![0u8; KEY_SIZE];
         OsRng.fill_bytes(&mut key);
-        self.master_key = Some(key.clone());
+        self.master_key = Some(Zeroizing::new(key.clone()));
         key
     }
     
@@ -53,13 +54,15 @@ impl CryptoManager {
         let key = self.master_key.as_ref()
             .ok_or_else(|| anyhow::anyhow!("Aucune clé maître définie"))?;
         
-        let cipher = Aes256Gcm::new_from_slice(key)
-            .context("Invalid key length")?;
+        let cipher = Aes256Gcm::new_from_slice(&key[..])
+            .map_err(|_| anyhow::anyhow!("Invalid key length"))?;
         
-        let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+        let mut nonce_bytes = vec![0u8; 12];
+        OsRng.fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
         
-        let ciphertext = cipher.encrypt(&nonce, plaintext)
-            .context("Encryption failed")?;
+        let ciphertext = cipher.encrypt(nonce, plaintext)
+            .map_err(|_| anyhow::anyhow!("Encryption failed"))?;
         
         // Concaténer nonce + ciphertext
         let mut result = nonce.to_vec();
@@ -83,11 +86,11 @@ impl CryptoManager {
         let nonce = Nonce::from_slice(&ciphertext[..NONCE_SIZE]);
         let ciphertext_data = &ciphertext[NONCE_SIZE..];
         
-        let cipher = Aes256Gcm::new_from_slice(key)
-            .context("Invalid key length")?;
+        let cipher = Aes256Gcm::new_from_slice(&key[..])
+            .map_err(|_| anyhow::anyhow!("Invalid key length"))?;
         
         cipher.decrypt(nonce, ciphertext_data)
-            .context("Decryption failed")
+            .map_err(|_| anyhow::anyhow!("Decryption failed"))
     }
     
     /// Dérive une clé de session à partir de la clé maître
@@ -98,10 +101,10 @@ impl CryptoManager {
         let key = self.master_key.as_ref()
             .ok_or_else(|| anyhow::anyhow!("Aucune clé maître définie"))?;
         
-        let hkdf = Hkdf::<Sha256>::new(None, key);
+        let mut hkdf = Hkdf::<Sha256>::new(None, &key[..]);
         let mut session_key = vec![0u8; KEY_SIZE];
         hkdf.expand(context, &mut session_key)
-            .context("Session key derivation failed")?;
+            .map_err(|_| anyhow::anyhow!("Session key derivation failed"))?;
         
         Ok(session_key)
     }
@@ -115,9 +118,7 @@ impl CryptoManager {
     
     /// Efface la clé maître de la mémoire
     pub fn clear_master_key(&mut self) {
-        if let Some(mut key) = self.master_key.take() {
-            key.zeroize();
-        }
+        self.master_key = None;
     }
 }
 

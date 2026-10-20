@@ -103,13 +103,14 @@ impl Default for WatchSettings {
     }
 }
 
-/// Chemin du socket IPC pour la communication avec l'app Secrets
-pub fn secrets_socket_path() -> PathBuf {
-    let config_dir = dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join("osint_app");
-    
-    config_dir.join("secrets.sock")
+impl AppSettings {
+    pub fn secrets_socket_path(&self) -> PathBuf {
+        let config_dir = dirs::config_dir()
+            .unwrap_or_else(|| PathBuf::from("/tmp"))
+            .join("osint_app");
+        
+        config_dir.join("secrets.sock")
+    }
 }
 
 /// Types d'entités

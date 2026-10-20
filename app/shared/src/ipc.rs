@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub const IPC_PROTOCOL_VERSION: &str = "1.0";
 
 /// Types de messages IPC
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum MessageType {
     Request,
     Response,
